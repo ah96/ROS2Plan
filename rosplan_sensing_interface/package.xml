@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>rosplan_sensing_interface</name>
+  <version>2.0.0</version>
+  <description>ROSPlan sensing interface — subscribes to topics/services and maintains KB predicate state</description>
+
+  <maintainer email="amarhalilovic96@gmail.com">ROSPlan maintainers</maintainer>
+  <license>BSD</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ament_cmake_python</buildtool_depend>
+
+  <depend>rclpy</depend>
+  <depend>rosplan_knowledge_msgs</depend>
+  <depend>diagnostic_msgs</depend>
+  <depend>ament_index_python</depend>
+
+  <exec_depend>python3-numpy</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

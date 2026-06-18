@@ -1,0 +1,3 @@
+#!/usr/bin/env python3
+from rosplan_action_interface.ActionInterfaceManager import main
+main()
