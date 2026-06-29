@@ -11,8 +11,8 @@ import argparse
 import sys
 import rclpy
 from rclpy.node import Node
-from rosplan_knowledge_msgs.msg import KnowledgeItem
-from rosplan_knowledge_msgs.srv import KnowledgeUpdateServiceArray
+from ros2plan_knowledge_msgs.msg import KnowledgeItem
+from ros2plan_knowledge_msgs.srv import KnowledgeUpdateServiceArray
 from diagnostic_msgs.msg import KeyValue
 
 
@@ -21,7 +21,7 @@ class StateLoader(Node):
         super().__init__('turtlebot_state_loader')
         self._waypoints = waypoints
         self._robot = robot
-        self._kb = 'rosplan_knowledge_base'
+        self._kb = 'ros2plan_knowledge_base'
 
         # Satellite node to make blocking service calls
         self._svc_node = rclpy.create_node('state_loader_svc')
@@ -73,25 +73,18 @@ class StateLoader(Node):
             ki.values = [KeyValue(key=f'?p{j}', value=v) for j, v in enumerate(params)]
             items.append(ki)
 
-        # --- Goals: visit all waypoints and return docked ---
-        for i in range(self._waypoints):
-            ki = KnowledgeItem()
-            ki.knowledge_type = KnowledgeItem.FACT
-            ki.is_negative = False
-            ki.attribute_name = 'visited'
-            ki.values = [KeyValue(key='?wp', value=f'wp{i}')]
-            # Mark as goal
-            ki_goal = KnowledgeItem()
-            ki_goal.knowledge_type = KnowledgeItem.FACT
-            ki_goal.attribute_name = 'visited'
-            ki_goal.values = [KeyValue(key='?wp', value=f'wp{i}')]
-            items.append(ki_goal)
-
-        docked_goal = KnowledgeItem()
-        docked_goal.knowledge_type = KnowledgeItem.FACT
-        docked_goal.attribute_name = 'docked'
-        docked_goal.values = [KeyValue(key='?v', value=self._robot)]
-        items.append(docked_goal)
+        # --- Initial fact: the robot's start waypoint counts as visited.
+        #     A robot cannot goto_waypoint its own current waypoint, so wp0 has
+        #     to be visited up front for the 'visited wp0' goal to be reachable.
+        #     The remaining waypoints are NOT added here — they are the goal,
+        #     set separately in set_goals(). (Adding them as facts here would
+        #     leave the goal already satisfied and the planner would return an
+        #     empty plan.) ---
+        ki = KnowledgeItem()
+        ki.knowledge_type = KnowledgeItem.FACT
+        ki.attribute_name = 'visited'
+        ki.values = [KeyValue(key='?wp', value='wp0')]
+        items.append(ki)
 
         ok = self.call_update(items)
         if ok:

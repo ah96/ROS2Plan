@@ -1,0 +1,5 @@
+ros2plan_knowledge_msgs/KnowledgeItem[] knowledge
+---
+bool all_true
+bool[] results
+ros2plan_knowledge_msgs/KnowledgeItem[] false_knowledge

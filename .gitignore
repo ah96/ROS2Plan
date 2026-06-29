@@ -40,7 +40,7 @@ dist/
 .idea/
 
 # Temporary plan files
-rosplan_planning_system/common/plan*
+ros2plan_planning_system/common/plan*
 
 # Generated PDDL problem/solution files
 *.pddl.soln
@@ -48,3 +48,6 @@ problem.pddl
 
 # Logs
 *.log
+
+# Claude Code memory (local only, not for publishing)
+/.claude-memory/

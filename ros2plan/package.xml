@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>ros2plan</name>
+  <version>2.0.0</version>
+  <description>ROS2Plan metapackage</description>
+  <maintainer email="amarhalilovic96@gmail.com">ROS2Plan maintainers</maintainer>
+  <license>BSD</license>
+  <url type="website">https://github.com/KCL-Planning/ROSPlan</url>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <exec_depend>ros2plan_knowledge_msgs</exec_depend>
+  <exec_depend>ros2plan_dispatch_msgs</exec_depend>
+  <exec_depend>ros2plan_dependencies</exec_depend>
+  <exec_depend>ros2plan_planning_system</exec_depend>
+  <exec_depend>ros2plan_knowledge_base</exec_depend>
+  <exec_depend>ros2plan_sensing_interface</exec_depend>
+  <exec_depend>ros2plan_action_interface</exec_depend>
+  <exec_depend>ros2plan_rqt</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

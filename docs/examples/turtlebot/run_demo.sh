@@ -1,12 +1,22 @@
 #!/usr/bin/env bash
-# run_demo.sh  —  Full turtlebot ROS2Plan demo in a single terminal using tmux.
+# run_demo.sh  —  Full turtlebot ROS2Plan demo, end to end, in one terminal.
+#
+# Pipeline: knowledge base -> problem generation -> POPF planning -> plan
+#           parsing -> dispatch to simulated action interfaces.
 #
 # Usage:
-#   bash run_demo.sh [--waypoints N]   (default: 5)
+#   bash run_demo.sh [--waypoints N]      (default: 5)
 #
-# Requirements: tmux, ROS2 Humble, ROS2Plan built and sourced
+# Requirements: ROS2 Humble, ROS2Plan built and sourced:
+#   source /opt/ros/humble/setup.bash
+#   source ~/git/ros2_ws/install/setup.bash
+#
+# Each node is started with `ros2 run` and explicit parameters. The nodes
+# advertise their services/topics in the root namespace (e.g. /start_planning,
+# /parse_plan, /dispatch_plan, /problem_instance, /planner_output,
+# /complete_plan), so the default relative names already wire them together.
 
-set -e
+set -u
 
 WPS=5
 while [[ $# -gt 0 ]]; do
@@ -16,89 +26,93 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-DOMAIN=$(ros2 pkg prefix rosplan_planning_system)/share/rosplan_planning_system/test/pddl/turtlebot/domain.pddl
-POPF=$(ros2 pkg prefix rosplan_planning_system)/share/rosplan_planning_system/common/bin/popf
-PLANNER_CMD="timeout 30 ${POPF} DOMAIN PROBLEM"
+PS=ros2plan_planning_system
+KB=ros2plan_knowledge_base
+HERE="$(cd "$(dirname "$0")" && pwd)"
+SHARE="$(ros2 pkg prefix "$PS")/share/$PS"
+DOMAIN="$SHARE/test/pddl/turtlebot/domain.pddl"
+POPF="$SHARE/common/bin/popf"
+WORK="$(mktemp -d /tmp/ros2plan_demo.XXXXXX)"
 
-echo "=== ROS2Plan Turtlebot Demo ==="
-echo "Waypoints : ${WPS}"
-echo "Domain    : ${DOMAIN}"
-echo ""
+PIDS=()
+cleanup() { for p in "${PIDS[@]:-}"; do kill "$p" 2>/dev/null; done; }
+trap cleanup EXIT
 
-# ── Step 1: Knowledge Base ────────────────────────────────────────────────────
-echo "[1/7] Starting Knowledge Base..."
-ros2 launch rosplan_knowledge_base rosplan_knowledge_base.launch.py \
-    domain_path:="${DOMAIN}" &
-KB_PID=$!
-sleep 3
+echo "=== ROS2Plan Turtlebot Demo (${WPS} waypoints, robot: kenny) ==="
+echo "    domain : $DOMAIN"
+echo "    workdir: $WORK"
 
-# ── Step 2: Load initial state ────────────────────────────────────────────────
-echo "[2/7] Loading initial state (${WPS} waypoints, robot: kenny)..."
-python3 "$(dirname "$0")/load_state.py" --waypoints "${WPS}" --robot kenny
-
-# ── Step 3: Problem generation ────────────────────────────────────────────────
-echo "[3/7] Launching Problem Interface..."
-ros2 run rosplan_planning_system problemInterface &
-PROB_PID=$!
-sleep 2
-
-echo "      Generating problem file..."
-timeout 15 ros2 service call \
-    /rosplan_problem_interface/problem_generation_server \
-    std_srvs/srv/Empty "{}"
-
-# ── Step 4: Planning ──────────────────────────────────────────────────────────
-echo "[4/7] Launching Planner Interface (POPF)..."
-ros2 run rosplan_planning_system popfPlannerInterface \
-    --ros-args \
-    -p domain_path:="${DOMAIN}" \
-    -p planner_command:="${PLANNER_CMD}" &
-PLAN_PID=$!
-sleep 2
-
-echo "      Calling planner..."
-ros2 action send_goal /rosplan_planner_interface/start_planning \
-    rosplan_dispatch_msgs/action/Plan "{}"
-
-# ── Step 5: Plan parsing ──────────────────────────────────────────────────────
-echo "[5/7] Launching Plan Parser..."
-ros2 run rosplan_planning_system PDDLSimplePlanParser \
-    --ros-args \
-    -p planner_topic:=planner_output &
-PARSER_PID=$!
-sleep 2
-
-echo "      Parsing plan..."
-timeout 15 ros2 service call \
-    /rosplan_parsing_interface/parse_plan \
-    std_srvs/srv/Empty "{}"
-
-# ── Step 6: Simulated action interfaces ──────────────────────────────────────
-echo "[6/7] Starting simulated action interfaces..."
-for action in undock dock localise goto_waypoint; do
-    ros2 launch rosplan_planning_system simulated_action.launch.py \
-        pddl_action_name:="${action}" \
-        action_duration:=1.0 \
-        action_probability:=1.0 &
+# ── Step 1: Knowledge base ───────────────────────────────────────────────────
+echo "[1/6] Starting the knowledge base..."
+ros2 run "$KB" knowledgeBase --ros-args \
+    -p domain_path:="$DOMAIN" > "$WORK/kb.log" 2>&1 &
+PIDS+=($!)
+for i in $(seq 1 30); do
+    ros2 service list 2>/dev/null | grep -q "/$KB/domain/name" && break; sleep 1
 done
-sleep 3
 
-# ── Step 7: Dispatch ──────────────────────────────────────────────────────────
-echo "[7/7] Launching dispatcher and dispatching plan..."
-ros2 run rosplan_planning_system SimplePlanDispatcher \
-    --ros-args \
-    -p plan_topic:=complete_plan &
-DISP_PID=$!
+# ── Step 2: Load the initial state and goals ─────────────────────────────────
+echo "[2/6] Loading initial state and goals..."
+python3 "$HERE/load_state.py" --waypoints "$WPS" --robot kenny
+
+# ── Step 3: Start the planning-system nodes and simulated actions ────────────
+echo "[3/6] Starting problem / planner / parser / dispatcher and action interfaces..."
+ros2 run "$PS" problemInterface --ros-args \
+    -p knowledge_base:="$KB" \
+    -p problem_path:="$WORK/problem.pddl" \
+    -p planning_language:=PDDL > "$WORK/problem.log" 2>&1 &
+PIDS+=($!)
+
+ros2 run "$PS" popf_planner_interface --ros-args \
+    -p use_problem_topic:=true \
+    -p domain_path:="$DOMAIN" \
+    -p problem_path:="$WORK/problem.pddl" \
+    -p data_path:="$WORK/" \
+    -p planner_command:="timeout 30 $POPF DOMAIN PROBLEM" > "$WORK/planner.log" 2>&1 &
+PIDS+=($!)
+
+ros2 run "$PS" pddl_simple_plan_parser --ros-args \
+    -p knowledge_base:="$KB" > "$WORK/parser.log" 2>&1 &
+PIDS+=($!)
+
+ros2 run "$PS" pddl_simple_plan_dispatcher --ros-args \
+    -p knowledge_base:="$KB" > "$WORK/dispatcher.log" 2>&1 &
+PIDS+=($!)
+
+for action in undock dock localise goto_waypoint; do
+    ros2 run "$PS" simulatedAction --ros-args \
+        -p knowledge_base:="$KB" \
+        -p pddl_action_name:="$action" \
+        -p action_duration:=0.5 \
+        -p action_probability:=1.0 > "$WORK/sim_${action}.log" 2>&1 &
+    PIDS+=($!)
+done
+sleep 5
+
+# ── Step 4: Generate the problem and plan ────────────────────────────────────
+# Use the /planning_server Empty service (not the /start_planning action): the
+# service runs the planner using the node parameters set above, whereas the
+# action reads domain/problem/planner_command from the action goal instead.
+echo "[4/6] Generating the problem and planning (POPF)..."
+timeout 20 ros2 service call /problem_generation_server std_srvs/srv/Empty "{}" > /dev/null
 sleep 2
+timeout 40 ros2 service call /planning_server std_srvs/srv/Empty "{}" > /dev/null
 
-echo "      Dispatching..."
-timeout 120 ros2 service call \
-    /dispatch_plan \
-    rosplan_dispatch_msgs/srv/DispatchService "{}"
+# ── Step 5: Parse and dispatch ───────────────────────────────────────────────
+echo "[5/6] Parsing and dispatching the plan..."
+timeout 20 ros2 service call /parse_plan std_srvs/srv/Empty "{}" > /dev/null
+timeout 150 ros2 service call /dispatch_plan ros2plan_dispatch_msgs/srv/DispatchService "{}" \
+    | grep -E "success|goal_achieved" | head
 
-echo ""
-echo "=== Dispatch complete. ==="
-echo ""
-echo "Check KB state:"
-echo "  ros2 service call /rosplan_knowledge_base/state/propositions rosplan_knowledge_msgs/srv/GetAttributeService \"{attribute_name: 'visited'}\""
-echo "  ros2 service call /rosplan_knowledge_base/state/propositions rosplan_knowledge_msgs/srv/GetAttributeService \"{attribute_name: 'docked'}\""
+# ── Step 6: Report the final knowledge-base state ────────────────────────────
+echo "[6/6] Final knowledge-base state:"
+echo "  visited waypoints:"
+timeout 12 ros2 service call "/$KB/state/propositions" \
+    ros2plan_knowledge_msgs/srv/GetAttributeService "{predicate_name: 'visited'}" \
+    2>/dev/null | grep -oE "wp[0-9]+" | sort -u | sed 's/^/    /'
+echo "  docked:"
+timeout 12 ros2 service call "/$KB/state/propositions" \
+    ros2plan_knowledge_msgs/srv/GetAttributeService "{predicate_name: 'docked'}" \
+    2>/dev/null | grep -oE "value='?kenny'?" | head -1 | sed 's/^/    robot /'
+
+echo "=== Demo complete. (logs in $WORK) ==="
