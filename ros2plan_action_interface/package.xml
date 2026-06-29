@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>ros2plan_action_interface</name>
+  <version>2.0.0</version>
+  <description>Action interface manager for ROS2Plan — subscribes to PDDL action dispatch and forwards goals to external components via actionlib, service, or FSM interfaces.</description>
+
+  <maintainer email="bezrucav@igmr.rwth-aachen.de">Stefan Bezrucav</maintainer>
+  <maintainer email="michael.cashmore@strath.ac.uk">michael</maintainer>
+
+  <license>BSD</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ament_cmake_python</buildtool_depend>
+
+  <depend>rclpy</depend>
+  <depend>ros2plan_dispatch_msgs</depend>
+  <depend>ros2plan_knowledge_msgs</depend>
+  <depend>diagnostic_msgs</depend>
+  <depend>action_msgs</depend>
+  <depend>python3-yaml</depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

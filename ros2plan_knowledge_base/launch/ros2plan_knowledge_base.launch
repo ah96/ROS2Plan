@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<launch>
+
+  <!-- NOTE: This is an example launch file, please do not modify! -->
+
+  <arg name="domain_path" default="$(find ros2plan_planning_system)/test/pddl/turtlebot/domain.pddl"/>
+  <arg name="use_unknowns" default="false"/>
+  <arg name="kb_rate" default="100"/>
+
+  <!-- ros2plan knowledge base -->
+  <node name="ros2plan_knowledge_base" pkg="ros2plan_knowledge_base" type="knowledgeBase" respawn="false" output="screen">
+    <param name="domain_path" value="$(arg domain_path)" />
+    <!-- conditional planning flags -->
+    <param name="use_unknowns" value="$(arg use_unknowns)" />
+    <param name="kb_rate" value="$(arg kb_rate)" />
+  </node>
+
+</launch>

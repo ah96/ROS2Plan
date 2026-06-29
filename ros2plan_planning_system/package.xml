@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>ros2plan_planning_system</name>
+  <version>0.0.0</version>
+  <description>Deliberative layer of ROS2Plan. Deals with automatic problem generation, planning, dispatch, and replanning.</description>
+  <maintainer email="michael.cashmore@kcl.ac.uk">michael</maintainer>
+  <license>BSD</license>
+  <url type="website">https://github.com/KCL-Planning/ROSPlan</url>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <build_depend>rclcpp</build_depend>
+  <build_depend>rclcpp_action</build_depend>
+  <build_depend>std_msgs</build_depend>
+  <build_depend>std_srvs</build_depend>
+  <build_depend>diagnostic_msgs</build_depend>
+  <build_depend>ros2plan_dispatch_msgs</build_depend>
+  <build_depend>ros2plan_knowledge_msgs</build_depend>
+  <build_depend>ros2plan_dependencies</build_depend>
+
+  <exec_depend>rclcpp</exec_depend>
+  <exec_depend>rclcpp_action</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>std_srvs</exec_depend>
+  <exec_depend>diagnostic_msgs</exec_depend>
+  <exec_depend>ros2plan_dispatch_msgs</exec_depend>
+  <exec_depend>ros2plan_knowledge_msgs</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

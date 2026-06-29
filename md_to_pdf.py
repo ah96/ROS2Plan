@@ -179,6 +179,6 @@ def convert(md_path, out_path):
     print(f"Written: {out_path}")
 
 if __name__ == '__main__':
-    md  = sys.argv[1] if len(sys.argv) > 1 else '/home/amar/git/ROSPlan/ros2_migration.md'
-    out = sys.argv[2] if len(sys.argv) > 2 else '/home/amar/git/ROSPlan/ros2_migration.pdf'
+    md  = sys.argv[1] if len(sys.argv) > 1 else 'ros2_migration.md'
+    out = sys.argv[2] if len(sys.argv) > 2 else 'ros2_migration.pdf'
     convert(md, out)

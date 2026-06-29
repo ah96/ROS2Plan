@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>ros2plan_rqt</name>
+  <version>2.0.0</version>
+  <description>ROS2Plan rqt GUI plugins for visualising and interacting with a running ROS2Plan system</description>
+
+  <maintainer email="amarhalilovic96@gmail.com">ROS2Plan maintainers</maintainer>
+  <license>BSD</license>
+  <url type="website">https://github.com/KCL-Planning/ROSPlan</url>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ament_cmake_python</buildtool_depend>
+
+  <depend>rclpy</depend>
+  <depend>rqt_gui</depend>
+  <depend>rqt_gui_py</depend>
+  <depend>ros2plan_dispatch_msgs</depend>
+  <depend>ros2plan_knowledge_msgs</depend>
+  <depend>diagnostic_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>ament_index_python</depend>
+
+  <exec_depend>python3-yaml</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+    <rqt_gui plugin="${prefix}/plugin.xml"/>
+  </export>
+</package>

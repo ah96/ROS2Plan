@@ -1,0 +1,3 @@
+#!/usr/bin/env python3
+from ros2plan_sensing_interface.sensing_interface import main
+main()

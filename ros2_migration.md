@@ -39,15 +39,15 @@ starting with packages that have no ROS API surface and finishing with the GUI l
 
 | Package | Language | Dependency | Notes |
 |---|---|---|---|
-| `rosplan_dependencies` | C++ | — | VAL PDDL library, HDDL parser, CHIMP planner |
-| `rosplan_knowledge_msgs` | IDL | — | Messages, services, actions |
-| `rosplan_dispatch_msgs` | IDL | — | Messages, services, actions |
-| `rosplan_knowledge_base` | C++ | msgs | Largest node; establishes all patterns |
-| `rosplan_planning_system` | C++ | KB + msgs | 20 executables; planner adapters, dispatchers |
-| `rosplan_action_interface` | Python | dispatch_msgs | Base classes for action execution |
-| `rosplan_sensing_interface` | Python | knowledge_msgs | Periodic KB updates from sensors |
-| `rosplan_rqt` | Python/Qt | all | rqt GUI plugins |
-| `rosplan` | — | all | Meta-package; trivial |
+| `ros2plan_dependencies` | C++ | — | VAL PDDL library, HDDL parser, CHIMP planner |
+| `ros2plan_knowledge_msgs` | IDL | — | Messages, services, actions |
+| `ros2plan_dispatch_msgs` | IDL | — | Messages, services, actions |
+| `ros2plan_knowledge_base` | C++ | msgs | Largest node; establishes all patterns |
+| `ros2plan_planning_system` | C++ | KB + msgs | 20 executables; planner adapters, dispatchers |
+| `ros2plan_action_interface` | Python | dispatch_msgs | Base classes for action execution |
+| `ros2plan_sensing_interface` | Python | knowledge_msgs | Periodic KB updates from sensors |
+| `ros2plan_rqt` | Python/Qt | all | rqt GUI plugins |
+| `ros2plan` | — | all | Meta-package; trivial |
 
 Migration is done package by package with `colcon build --packages-select <pkg>` to verify each
 step before proceeding.
@@ -158,7 +158,7 @@ public:
 };
 
 int main(int argc, char** argv) {
-    ros::init(argc, argv, "rosplan_knowledge_base");
+    ros::init(argc, argv, "ros2plan_knowledge_base");
     ros::NodeHandle nh("~");
     KnowledgeBase kb(nh);
     ros::spin();
@@ -167,7 +167,7 @@ int main(int argc, char** argv) {
 // ROS2: class inherits from rclcpp::Node
 class KnowledgeBase : public rclcpp::Node {
 public:
-    KnowledgeBase() : Node("rosplan_knowledge_base") {}
+    KnowledgeBase() : Node("ros2plan_knowledge_base") {}
 };
 
 int main(int argc, char** argv) {
@@ -245,11 +245,11 @@ Key rules:
 ```cpp
 // ROS1
 _nh.advertiseService("domain/name", &KnowledgeBase::getDomainName, this);
-bool getDomainName(rosplan_knowledge_msgs::GetDomainName::Request& req,
-                   rosplan_knowledge_msgs::GetDomainName::Response& res) { ... return true; }
+bool getDomainName(ros2plan_knowledge_msgs::GetDomainName::Request& req,
+                   ros2plan_knowledge_msgs::GetDomainName::Response& res) { ... return true; }
 
 // ROS2
-create_service<rosplan_knowledge_msgs::srv::GetDomainNameService>(
+create_service<ros2plan_knowledge_msgs::srv::GetDomainNameService>(
     "~/domain/name",
     [this](const std::shared_ptr<...::Request> req, std::shared_ptr<...::Response> res) {
         getDomainName(req, res);
@@ -266,11 +266,11 @@ ROS1 for caller-IP introspection — has no ROS2 equivalent; all event-based tra
 
 In ROS1, service names are resolved globally from the node's private namespace (`~`).  In ROS2
 a relative name `"domain/name"` resolves to `/domain/name` (root namespace).  The planning nodes
-build client paths as `"/" + kb_name + "/domain/name"` (e.g., `/rosplan_knowledge_base/domain/name`).
+build client paths as `"/" + kb_name + "/domain/name"` (e.g., `/ros2plan_knowledge_base/domain/name`).
 To match, KB services must use the `~/` prefix:
 
 ```cpp
-// Wrong in ROS2 — resolves to /domain/name, not /rosplan_knowledge_base/domain/name
+// Wrong in ROS2 — resolves to /domain/name, not /ros2plan_knowledge_base/domain/name
 create_service<T>("domain/name", ...);
 
 // Correct — ~/  expands to /<namespace>/<node_name>/
@@ -320,9 +320,9 @@ planner_output_sub_ = create_subscription<std_msgs::msg::String>(
     sub_opts);
 
 // SimplePlanDispatcher.cpp
-plan_sub_ = create_subscription<rosplan_dispatch_msgs::msg::CompletePlan>(
+plan_sub_ = create_subscription<ros2plan_dispatch_msgs::msg::CompletePlan>(
     plan_topic, rclcpp::QoS(1).transient_local(),
-    [this](const rosplan_dispatch_msgs::msg::CompletePlan::SharedPtr msg) { planCallback(msg); },
+    [this](const ros2plan_dispatch_msgs::msg::CompletePlan::SharedPtr msg) { planCallback(msg); },
     sub_opts);
 ```
 
@@ -435,7 +435,7 @@ With the default namespace `/`, a relative name `foo` becomes `/foo`, **not**
 
 This caused a topic mismatch during integration testing: the planner interface published to
 `planner_output` (relative → `/planner_output`), while a test script subscribed to
-`/rosplan_planner_interface/planner_output` (incorrectly treating the node name as a namespace
+`/ros2plan_planner_interface/planner_output` (incorrectly treating the node name as a namespace
 prefix).  The fix was to use the same relative name `planner_output` on both ends.
 
 ---
@@ -561,7 +561,7 @@ def call_blocking(client, request, timeout_sec=5.0):
     return future.result() if future.done() else None
 ```
 
-Applied in `RPKnowledgeBaseLink`, `ServiceActionInterface`, and all `rosplan_rqt` widgets.
+Applied in `RPKnowledgeBaseLink`, `ServiceActionInterface`, and all `ros2plan_rqt` widgets.
 
 ### 12.3 Action clients (Python)
 
@@ -607,7 +607,7 @@ with open(config_path) as f:
 ```
 
 ```bash
-ros2 run rosplan_sensing_interface sensing_interface \
+ros2 run ros2plan_sensing_interface sensing_interface \
     --ros-args -p config_path:=/path/to/config.yaml
 ```
 
@@ -669,12 +669,12 @@ kus.update_type.append(KnowledgeUpdateServiceArray.Request.ADD_KNOWLEDGE)
 
 ```xml
 <!-- ROS1 -->
-<node name="rosplan_interface_$(arg pddl_action_name)" .../>
+<node name="ros2plan_interface_$(arg pddl_action_name)" .../>
 ```
 
 ```python
 # ROS2 — pass a list
-Node(name=['rosplan_interface_', LaunchConfiguration('pddl_action_name')], ...)
+Node(name=['ros2plan_interface_', LaunchConfiguration('pddl_action_name')], ...)
 ```
 
 ### 13.3 Path resolution: share directory
@@ -695,7 +695,7 @@ DeclareLaunchArgument(
     'planner_command',
     default_value=[
         'timeout 10 ',
-        PathJoinSubstitution([FindPackageShare('rosplan_planning_system'),
+        PathJoinSubstitution([FindPackageShare('ros2plan_planning_system'),
                               'common', 'bin', 'popf']),
         ' DOMAIN PROBLEM',
     ]
@@ -710,22 +710,22 @@ DeclareLaunchArgument(
 
 ```cpp
 // ROS1
-#include "rosplan_knowledge_msgs/KnowledgeItem.h"
+#include "ros2plan_knowledge_msgs/KnowledgeItem.h"
 
 // ROS2 — snake_case, .hpp, under msg/ or srv/ subdirectory
-#include "rosplan_knowledge_msgs/msg/knowledge_item.hpp"
+#include "ros2plan_knowledge_msgs/msg/knowledge_item.hpp"
 ```
 
 ### 14.2 Namespace
 
 ```cpp
 // ROS1
-rosplan_knowledge_msgs::KnowledgeItem item;
-rosplan_knowledge_msgs::GetDomainNameService srv;
+ros2plan_knowledge_msgs::KnowledgeItem item;
+ros2plan_knowledge_msgs::GetDomainNameService srv;
 
 // ROS2
-rosplan_knowledge_msgs::msg::KnowledgeItem item;
-rosplan_knowledge_msgs::srv::GetDomainNameService srv;
+ros2plan_knowledge_msgs::msg::KnowledgeItem item;
+ros2plan_knowledge_msgs::srv::GetDomainNameService srv;
 ```
 
 ### 14.3 Request and response access
@@ -747,8 +747,8 @@ ROSPlan embeds two copies of the VAL PDDL validation library with incompatible n
 
 | Location | Namespace | Used by |
 |---|---|---|
-| `rosplan_dependencies/VAL/` | `VAL` | `libval_kcl.so` (external planners) |
-| `rosplan_knowledge_base/src/VALfiles/` | `VAL1_2` | `knowledgeBase` executable |
+| `ros2plan_dependencies/VAL/` | `VAL` | `libval_kcl.so` (external planners) |
+| `ros2plan_knowledge_base/src/VALfiles/` | `VAL1_2` | `knowledgeBase` executable |
 
 The two copies **cannot be linked together**.  The knowledge base compiles its VALfiles directly
 into the executable and does not link `libval_kcl`.
@@ -761,20 +761,20 @@ The pre-generated PDDL flex scanner embedded in `pddl+.cpp` was built against an
 
 The solution is to keep a copy of the pointer-API header alongside the scanner source:
 ```
-rosplan_knowledge_base/src/VALfiles/FlexLexer.h
+ros2plan_knowledge_base/src/VALfiles/FlexLexer.h
 ```
-copied from `rosplan_dependencies/VAL/include/FlexLexer.h`.
+copied from `ros2plan_dependencies/VAL/include/FlexLexer.h`.
 
 ### 15.2 HDDL parser: shared vs. static library
 
-Both the PDDL scanner and the HDDL scanner (`rosplan_dependencies`) define the global flex
+Both the PDDL scanner and the HDDL scanner (`ros2plan_dependencies`) define the global flex
 memory functions `yyalloc`, `yyrealloc`, and `yyfree`.  When `libhddl_parser` is a static
 library, these symbols collide at final link time.
 
 Building it as a **shared library** (`.so`) isolates the symbol scope and resolves the conflict:
 
 ```cmake
-# rosplan_dependencies/CMakeLists.txt
+# ros2plan_dependencies/CMakeLists.txt
 add_library(hddl_parser SHARED ...)
 ```
 
@@ -803,7 +803,7 @@ install(FILES
   ${CMAKE_CURRENT_BINARY_DIR}/hddl_parser/location.hh
   ${CMAKE_CURRENT_BINARY_DIR}/hddl_parser/position.hh
   ${CMAKE_CURRENT_BINARY_DIR}/hddl_parser/stack.hh
-  DESTINATION include/rosplan_dependencies/hddl_parser)
+  DESTINATION include/ros2plan_dependencies/hddl_parser)
 ```
 
 ---
@@ -819,13 +819,13 @@ pipeline is exercised end-to-end.
 
 **Root cause:** KB services were registered with relative names (`"domain/name"`) which resolve
 to `/domain/name` (root namespace).  Planning nodes construct client paths as
-`"/" + kb_name + "/domain/name"` = `/rosplan_knowledge_base/domain/name`.
+`"/" + kb_name + "/domain/name"` = `/ros2plan_knowledge_base/domain/name`.
 
 **Fix:** Prefix all 19 KB service registrations in `KnowledgeBase.cpp` with `~/`:
 
 ```cpp
 create_service<T>("~/domain/name", ...);
-// resolves to /rosplan_knowledge_base/domain/name ✓
+// resolves to /ros2plan_knowledge_base/domain/name ✓
 ```
 
 ### 17.2 POPF binary path double-nesting
@@ -834,7 +834,7 @@ create_service<T>("~/domain/name", ...);
 
 **Root cause:** `install(DIRECTORY common/bin DESTINATION .../common/bin/)` (no trailing slash
 on source) copies the `bin/` directory itself into the destination, producing the path
-`share/rosplan_planning_system/common/bin/bin/popf`.
+`share/ros2plan_planning_system/common/bin/bin/popf`.
 
 **Fix:** Add trailing slash to source path:
 

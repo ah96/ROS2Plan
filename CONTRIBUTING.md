@@ -16,7 +16,7 @@ source install/setup.bash
 
 ```bash
 # Build a single package
-colcon build --packages-select rosplan_knowledge_base
+colcon build --packages-select ros2plan_knowledge_base
 
 # Build everything
 colcon build

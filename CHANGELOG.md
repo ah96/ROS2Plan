@@ -49,7 +49,7 @@ Initial release of ROS2Plan: full port of ROSPlan to ROS2 Humble Hawksbill on Ub
 - Dynamic action/message import via `importlib.import_module`
 
 #### VAL / FlexLexer
-- `rosplan_knowledge_base/src/VALfiles/FlexLexer.h` kept as pointer-API version to match pre-generated scanner
+- `ros2plan_knowledge_base/src/VALfiles/FlexLexer.h` kept as pointer-API version to match pre-generated scanner
 - GCC 11 `-O1` internal compiler error avoided by removing explicit optimization flag
 
 ### Fixed

@@ -6,15 +6,15 @@ ROS2Plan is a port of the [ROSPlan](https://github.com/KCL-Planning/ROSPlan) tas
 
 | Package | Description |
 |---|---|
-| `rosplan_dependencies` | VAL PDDL validator, HDDL parser, POPF/CHIMP planner binaries |
-| `rosplan_knowledge_msgs` | Messages, services, and actions for the knowledge base |
-| `rosplan_dispatch_msgs` | Messages, services, and actions for plan dispatch |
-| `rosplan_knowledge_base` | PDDL/HDDL knowledge base node |
-| `rosplan_planning_system` | Problem generation, planner interfaces (POPF, CHIMP, …), plan parsing, plan dispatch |
-| `rosplan_action_interface` | Python base classes for action execution nodes |
-| `rosplan_sensing_interface` | Periodic knowledge base updates from sensor callbacks |
-| `rosplan_rqt` | rqt GUI plugins (dispatcher, plan viewer, action config) |
-| `rosplan` | Meta-package |
+| `ros2plan_dependencies` | VAL PDDL validator, HDDL parser, POPF/CHIMP planner binaries |
+| `ros2plan_knowledge_msgs` | Messages, services, and actions for the knowledge base |
+| `ros2plan_dispatch_msgs` | Messages, services, and actions for plan dispatch |
+| `ros2plan_knowledge_base` | PDDL/HDDL knowledge base node |
+| `ros2plan_planning_system` | Problem generation, planner interfaces (POPF, CHIMP, …), plan parsing, plan dispatch |
+| `ros2plan_action_interface` | Python base classes for action execution nodes |
+| `ros2plan_sensing_interface` | Periodic knowledge base updates from sensor callbacks |
+| `ros2plan_rqt` | rqt GUI plugins (dispatcher, plan viewer, action config) |
+| `ros2plan` | Meta-package |
 
 ## Requirements
 
@@ -41,41 +41,35 @@ source install/setup.bash
 The RDDL and PPDDL sub-parsers are disabled by default (they have additional dependencies):
 
 ```bash
-colcon build --packages-select rosplan_knowledge_base \
-    --cmake-args -DROSPLAN_BUILD_RDDL=OFF -DROSPLAN_BUILD_PPDDL=OFF
+colcon build --packages-select ros2plan_knowledge_base \
+    --cmake-args -DROS2PLAN_BUILD_RDDL=OFF -DROS2PLAN_BUILD_PPDDL=OFF
 ```
 
 ## Quick start
 
-### 1. Launch the knowledge base
+The fastest way to see the whole pipeline — knowledge base, problem generation, planning,
+parsing, dispatch and four simulated action interfaces — is the turtlebot demo:
 
 ```bash
-ros2 launch rosplan_knowledge_base rosplan_knowledge_base.launch.py \
-    domain_path:=/path/to/domain.pddl
+bash docs/examples/turtlebot/run_demo.sh --waypoints 5
 ```
 
-### 2. Launch the full planning system
+It ends with the robot having visited every waypoint and re-docked
+(`goal_achieved=True`). The script is also the clearest reference for how each node is
+launched and wired together.
+
+To run the steps yourself, the trigger services live in the **root** namespace, and the
+planner is best triggered with the `/planning_server` service (which uses the node
+parameters):
 
 ```bash
-ros2 launch rosplan_planning_system interfaced_planning_system.launch.py \
-    domain_path:=/path/to/domain.pddl \
-    problem_path:=/path/to/problem.pddl \
-    planner_command:="timeout 10 $(ros2 pkg prefix rosplan_planning_system)/share/rosplan_planning_system/common/bin/popf DOMAIN PROBLEM"
+ros2 service call /problem_generation_server std_srvs/srv/Empty "{}"   # generate problem
+ros2 service call /planning_server          std_srvs/srv/Empty "{}"    # run the planner
+ros2 service call /parse_plan               std_srvs/srv/Empty "{}"    # parse the plan
+ros2 service call /dispatch_plan ros2plan_dispatch_msgs/srv/DispatchService "{}"  # dispatch
 ```
 
-### 3. Trigger planning and dispatch
-
-```bash
-# Generate problem
-ros2 service call /rosplan_problem_interface/problem_generation_server std_srvs/srv/Empty
-
-# Run planner
-ros2 action send_goal /rosplan_planner_interface/start_planning rosplan_dispatch_msgs/action/Plan "{}"
-
-# Parse and dispatch
-ros2 service call /rosplan_parsing_interface/parse_plan std_srvs/srv/Empty
-ros2 service call /dispatch_plan rosplan_dispatch_msgs/srv/DispatchService "{}"
-```
+See the [documentation and tutorials](docs/index.md) for the full step-by-step walkthrough.
 
 ## Architecture
 
@@ -117,7 +111,7 @@ A full description of every change made during the port is in
 For testing without real hardware, use the provided simulated action interface:
 
 ```bash
-ros2 launch rosplan_planning_system simulated_action.launch.py \
+ros2 launch ros2plan_planning_system simulated_action.launch.py \
     pddl_action_name:=goto_waypoint \
     action_duration:=1.0 \
     action_probability:=1.0
@@ -126,12 +120,12 @@ ros2 launch rosplan_planning_system simulated_action.launch.py \
 ## Sensing interface
 
 ```bash
-ros2 run rosplan_sensing_interface sensing_interface \
+ros2 run ros2plan_sensing_interface sensing_interface \
     --ros-args -p config_path:=/path/to/sensing_config.yaml
 ```
 
 The YAML format is unchanged from ROS1.  See
-`rosplan_sensing_interface/config/sensing_example.yaml` for a template.
+`ros2plan_sensing_interface/config/sensing_example.yaml` for a template.
 
 ## rqt plugins
 
@@ -139,7 +133,7 @@ The YAML format is unchanged from ROS1.  See
 rqt --force-discover
 ```
 
-The following plugins are available under *Plugins → ROSPlan*:
+The following plugins are available under *Plugins → ROS2Plan*:
 
 - **Plan Dispatcher** — send service calls from the GUI
 - **Action Dispatcher** — manually dispatch individual actions
