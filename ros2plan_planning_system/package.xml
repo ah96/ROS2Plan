@@ -27,6 +27,11 @@
   <exec_depend>ros2plan_knowledge_msgs</exec_depend>
   <exec_depend>python3-yaml</exec_depend>
 
+  <test_depend>ament_cmake_gtest</test_depend>
+  <test_depend>launch_testing_ament_cmake</test_depend>
+  <test_depend>ros_testing</test_depend>
+  <test_depend>ament_index_cpp</test_depend>
+
   <export>
     <build_type>ament_cmake</build_type>
   </export>

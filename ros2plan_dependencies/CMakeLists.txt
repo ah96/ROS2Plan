@@ -7,8 +7,19 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(ament_cmake REQUIRED)
 find_package(ros2plan_knowledge_msgs REQUIRED)
 
-option(ROS2PLAN_BUILD_RDDL  "Build the RDDL parser (requires GCC >= 12 or Clang)" OFF)
-option(ROS2PLAN_BUILD_PPDDL "Build the PPDDL parser (probabilistic PDDL support)"  OFF)
+# The RDDL parser hits an internal compiler error on GCC 11 (the Ubuntu 22.04
+# default), so it can only be built with GCC >= 12 or Clang. Default it ON when
+# the active toolchain supports it, otherwise OFF. Override with -DROS2PLAN_BUILD_RDDL=ON/OFF.
+if((CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS 12)
+   OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  set(ROS2PLAN_RDDL_DEFAULT ON)
+else()
+  set(ROS2PLAN_RDDL_DEFAULT OFF)
+  message(STATUS "[${PROJECT_NAME}] ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION} < GCC 12: RDDL parser defaults OFF (build with g++-12/Clang or -DROS2PLAN_BUILD_RDDL=ON to enable).")
+endif()
+
+option(ROS2PLAN_BUILD_RDDL  "Build the RDDL parser (requires GCC >= 12 or Clang)" ${ROS2PLAN_RDDL_DEFAULT})
+option(ROS2PLAN_BUILD_PPDDL "Build the PPDDL parser (probabilistic PDDL support)"  ON)
 option(ROS2PLAN_COMPILE_CHIMP "Build the CHIMP HTN planner" OFF)
 
 # Get the git submodules

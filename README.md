@@ -36,14 +36,32 @@ colcon build
 source install/setup.bash
 ```
 
-### Building the knowledge base
+### Knowledge base: PDDL, HDDL, PPDDL and RDDL
 
-The RDDL and PPDDL sub-parsers are disabled by default (they have additional dependencies):
+The knowledge base supports four modelling languages. **PDDL** and **HDDL** are always
+built. **PPDDL** (probabilistic PDDL) is built **by default**. **RDDL** requires a C++ compiler
+of **GCC ≥ 12 or Clang** (GCC 11 — the Ubuntu 22.04 default — hits an internal compiler error on
+the RDDL parser), so it is auto-enabled **only when such a compiler is active**, and skipped
+otherwise:
 
 ```bash
-colcon build --packages-select ros2plan_knowledge_base \
-    --cmake-args -DROS2PLAN_BUILD_RDDL=OFF -DROS2PLAN_BUILD_PPDDL=OFF
+# Default (GCC 11): PDDL + HDDL + PPDDL
+colcon build
+
+# Full set including RDDL — build with GCC 12 (or Clang):
+sudo apt install g++-12 gcc-12
+CC=gcc-12 CXX=g++-12 colcon build
 ```
+
+Each language can be forced on or off explicitly:
+
+```bash
+colcon build --cmake-args -DROS2PLAN_BUILD_RDDL=ON -DROS2PLAN_BUILD_PPDDL=OFF
+```
+
+> The same flag (and the GCC-12 requirement for RDDL) applies to both
+> `ros2plan_dependencies` and `ros2plan_knowledge_base`; the defaults are kept in sync so a
+> plain `colcon build` of the whole workspace is consistent.
 
 ## Quick start
 

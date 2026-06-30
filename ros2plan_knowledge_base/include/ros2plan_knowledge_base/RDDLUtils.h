@@ -5,21 +5,22 @@
 #ifndef ROS2PLAN_KNOWLEDGE_BASE_RDDLOPERATORUTILS_H
 #define ROS2PLAN_KNOWLEDGE_BASE_RDDLOPERATORUTILS_H
 
-#define NOT_IMPLEMENTED(str) ROS_WARN_STREAM(__FILE__ << ":" << __LINE__ << ": " << str)
+#include <rclcpp/rclcpp.hpp>
+
+#define NOT_IMPLEMENTED(str) RCLCPP_WARN_STREAM(rclcpp::get_logger("RDDLUtils"), __FILE__ << ":" << __LINE__ << ": " << str)
 #define NOT_IMPLEMENTED_OPERATOR NOT_IMPLEMENTED("Unknown or unsupported operand type for the action preconditions.")
 
-#include <ros2plan_knowledge_msgs/DomainFormula.h>
-#include <ros2plan_knowledge_msgs/DomainAssignment.h>
-#include <ros2plan_knowledge_msgs/ProbabilisticEffect.h>
-#include <ros2plan_knowledge_msgs/KnowledgeItem.h>
+#include <ros2plan_knowledge_msgs/msg/domain_formula.hpp>
+#include <ros2plan_knowledge_msgs/msg/domain_assignment.hpp>
+#include <ros2plan_knowledge_msgs/msg/probabilistic_effect.hpp>
+#include <ros2plan_knowledge_msgs/msg/knowledge_item.hpp>
 #include "RDDLParser.h"
 namespace KCL_ros2plan {
 
-    typedef std::vector<ros2plan_knowledge_msgs::DomainFormula> vectorDF;
-    typedef std::vector<ros2plan_knowledge_msgs::DomainAssignment> vectorDA;
-    typedef std::vector<ros2plan_knowledge_msgs::DomainAssignment> vectorDA;
-    typedef std::vector<ros2plan_knowledge_msgs::ProbabilisticEffect> vectorPE;
-    typedef std::vector<ros2plan_knowledge_msgs::KnowledgeItem> vectorKI;
+    typedef std::vector<ros2plan_knowledge_msgs::msg::DomainFormula> vectorDF;
+    typedef std::vector<ros2plan_knowledge_msgs::msg::DomainAssignment> vectorDA;
+    typedef std::vector<ros2plan_knowledge_msgs::msg::ProbabilisticEffect> vectorPE;
+    typedef std::vector<ros2plan_knowledge_msgs::msg::KnowledgeItem> vectorKI;
     struct PosNegDomainFormula {
         vectorDF pos; // Positive or add formulas
         vectorDF neg; // Negative or delete formulas
@@ -41,23 +42,23 @@ namespace KCL_ros2plan {
         static inline void negate(PosNegDomainFormula& p);
         static inline void negate(EffectDomainFormula& p);
         /* Returns an assignment of the parameters of the op_var to the parmeters of the op_head, to match all the params for the operator */
-        static std::map<std::string, std::string> getParamReplacement(const ros2plan_knowledge_msgs::DomainFormula &op_head, const ParametrizedVariable* op_var);
+        static std::map<std::string, std::string> getParamReplacement(const ros2plan_knowledge_msgs::msg::DomainFormula &op_head, const ParametrizedVariable* op_var);
 
         static PosNegDomainFormula toDomainFormula(const LogicalExpression *expr, const std::map<std::string, std::string>& assign);
 
 
-        static PosNegDomainFormula getOperatorPrecondition(const ros2plan_knowledge_msgs::DomainFormula &op_head, const LogicalExpression *SAC);
-        static PosNegDomainFormula getOperatorPrecondition(const ros2plan_knowledge_msgs::DomainFormula &op_head, const Connective *SAC);
-        static PosNegDomainFormula getOperatorPrecondition(const ros2plan_knowledge_msgs::DomainFormula &op_head, const Negation *SAC);
+        static PosNegDomainFormula getOperatorPrecondition(const ros2plan_knowledge_msgs::msg::DomainFormula &op_head, const LogicalExpression *SAC);
+        static PosNegDomainFormula getOperatorPrecondition(const ros2plan_knowledge_msgs::msg::DomainFormula &op_head, const Connective *SAC);
+        static PosNegDomainFormula getOperatorPrecondition(const ros2plan_knowledge_msgs::msg::DomainFormula &op_head, const Negation *SAC);
 
 
-        static EffectDomainFormula getOperatorEffects(const ros2plan_knowledge_msgs::DomainFormula &op_head, const ParametrizedVariable *pVariable, const LogicalExpression *exp, std::map<std::string, std::string>& assign, bool& action_found, bool& exogenous);
-        static EffectDomainFormula getOperatorEffects(const ros2plan_knowledge_msgs::DomainFormula &op_head, const ParametrizedVariable *pVariable, const IfThenElseExpression *exp, std::map<std::string, std::string>& assign, bool& action_found, bool& exogenous);
+        static EffectDomainFormula getOperatorEffects(const ros2plan_knowledge_msgs::msg::DomainFormula &op_head, const ParametrizedVariable *pVariable, const LogicalExpression *exp, std::map<std::string, std::string>& assign, bool& action_found, bool& exogenous);
+        static EffectDomainFormula getOperatorEffects(const ros2plan_knowledge_msgs::msg::DomainFormula &op_head, const ParametrizedVariable *pVariable, const IfThenElseExpression *exp, std::map<std::string, std::string>& assign, bool& action_found, bool& exogenous);
         static EffectDomainFormula getOperatorEffects(const ParametrizedVariable *pVariable, const BernoulliDistribution *exp, const std::map<std::string, std::string>& assign, bool& action_found, bool& exogenous);
         static EffectDomainFormula getOperatorEffects(const ParametrizedVariable *pVariable, const DiscreteDistribution *exp, const std::map<std::string, std::string>& assign, bool& action_found, bool& exogenous);
-        static void fillForAllEffect(const ros2plan_knowledge_msgs::DomainFormula &op_head, const ParametrizedVariable *pVariable, const UniversalQuantification *exp, EffectDomainFormula& out, size_t paramid, std::map<std::string, std::string> &assign, bool& action_found, bool& exogenous);
+        static void fillForAllEffect(const ros2plan_knowledge_msgs::msg::DomainFormula &op_head, const ParametrizedVariable *pVariable, const UniversalQuantification *exp, EffectDomainFormula& out, size_t paramid, std::map<std::string, std::string> &assign, bool& action_found, bool& exogenous);
 
-        static vectorDA getOperatorAssignEffects(const ros2plan_knowledge_msgs::DomainFormula &op_head,
+        static vectorDA getOperatorAssignEffects(const ros2plan_knowledge_msgs::msg::DomainFormula &op_head,
                                                  const ParametrizedVariable *pVariable, const IfThenElseExpression *exp);
 
         static vectorKI getGoals(const LogicalExpression *exp, bool is_negative,  std::map<std::string, std::string> &assign);
@@ -72,10 +73,10 @@ namespace KCL_ros2plan {
          * @param SACs Action-State Constraints
          * @return Preconditions
          */
-        static PosNegDomainFormula getOperatorPreconditions(const ros2plan_knowledge_msgs::DomainFormula &op_head, const std::vector<LogicalExpression *> &SACs);
+        static PosNegDomainFormula getOperatorPreconditions(const ros2plan_knowledge_msgs::msg::DomainFormula &op_head, const std::vector<LogicalExpression *> &SACs);
 
-        static EffectDomainFormula getOperatorEffects(const ros2plan_knowledge_msgs::DomainFormula &op_head, const std::map<ParametrizedVariable*, LogicalExpression*>& CPFs);
-        static vectorDA getOperatorAssignEffects(const ros2plan_knowledge_msgs::DomainFormula &op_head,
+        static EffectDomainFormula getOperatorEffects(const ros2plan_knowledge_msgs::msg::DomainFormula &op_head, const std::map<ParametrizedVariable*, LogicalExpression*>& CPFs);
+        static vectorDA getOperatorAssignEffects(const ros2plan_knowledge_msgs::msg::DomainFormula &op_head,
                                                  const std::map<ParametrizedVariable *, LogicalExpression *> &CPFs);
 
         static vectorKI getGoals(const std::map<ParametrizedVariable*, LogicalExpression*>& CPFs,

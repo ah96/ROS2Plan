@@ -1,38 +1,44 @@
-# ros2plan_planning_system - unit tests
+# ros2plan_planning_system — tests
 
-## build tests manually
+These tests are built and run with `colcon` (ament). There are two kinds:
 
-Build ros2plan_planning_system tests:
+* **`chimp_problem_test`** — a pure gtest unit test (no ROS runtime) for CHIMP problem-file
+  generation (`test/src/CHIMPProblemTests.cpp`).
+* **launch-tests** — each pairs a gtest executable (`test/src/*Tests.cpp`) with a
+  `launch_testing` harness (`test/launch/*_test.py`) that brings up the knowledge base and the
+  node(s) under test, then runs the gtest against the live services/topics:
+  * `problem_interface_test` — problem generation
+  * `parsing_interface_test` — plan parsing (simple + esterel)
+  * `plan_dispatch_test` — plan dispatch
+  * `planner_interface_test` — POPF planner interface (full KB → problem → plan chain)
+  * `chimp_planner_interface_test` — only built when CHIMP is enabled
+    (`-DROS2PLAN_COMPILE_CHIMP=ON`, requires the Java CHIMP planner)
 
-        catkin build --no-deps ros2plan_planning_system --make-args run_tests
+## Build and run
 
-Build all catkin ws tests:
+From the colcon workspace root:
 
-        catkin build --make-args run_tests
+```bash
+colcon build --packages-select ros2plan_planning_system
+colcon test  --packages-select ros2plan_planning_system
+colcon test-result --verbose
+```
 
-## run tests manually
+## Run a single launch-test directly (with console output)
 
-Planner Interface tests:
+```bash
+launch_test src/<path-to>/ros2plan_planning_system/test/launch/problem_interface_test.py \
+    test_exe:=build/ros2plan_planning_system/problem_interface_test
+```
 
-        rostest ros2plan_planning_system planner_interface.test --text
+## Notes
 
-CHIMP Planner Interface tests:
-
-        rostest ros2plan_planning_system chimp_planner_interface.test --text
-
-Problem Interface tests:
-
-        rostest ros2plan_planning_system problem_interface.test --text
-
-Parsing Interface tests:
-
-        rostest ros2plan_planning_system parsing_interface.test --text
-
-Plan Dispatch Interface tests:
-
-        rostest ros2plan_planning_system plan_dispatch.test --text
-
-Run all catkin ws tests:
-
-        catkin run_tests
-
+* In ROS 2 the planning-system nodes advertise their trigger services/topics with relative
+  names in the default namespace, so they resolve to the **root** namespace
+  (`/problem_generation_server_params`, `/planning_server_params`, `/planner_output`,
+  `/complete_plan`, `/dispatch_plan`, …) — not under the node name. The tests use those
+  resolved names. The two plan parsers are launched in separate namespaces (`simple`/`esterel`)
+  to deconflict their identical relative names.
+* The PDDL problem generator emits a cosmetic blank line after each domain predicate (matching
+  upstream ROSPlan); string comparisons in the tests ignore blank lines and check the
+  meaningful content.

@@ -5,7 +5,7 @@
 #ifndef ROS2PLAN_KNOWLEDGE_BASE_PPDDLPARSER_H
 #define ROS2PLAN_KNOWLEDGE_BASE_PPDDLPARSER_H
 
-#include "ros/ros.h"
+#include <rclcpp/rclcpp.hpp>
 #include "PPDDLParserInterface.h"
 /**
  * Domain storage and parsing.

@@ -5,149 +5,153 @@
  * Author: Martin Koling (martinh.koling@kcl.ac.uk)
  * Author: Oscar Lima (oscar.lima@dfki.de)
  *
- * Unit tests for ROS2Plan planner interface
+ * Unit tests for ROS2Plan planner interface (ROS2 port)
  */
 
-#include <ros/ros.h>
-#include <ros/package.h>
+#include <chrono>
+#include <fstream>
+#include <memory>
+#include <sstream>
+#include <string>
+
 #include <gtest/gtest.h>
+#include <rclcpp/rclcpp.hpp>
+#include <ament_index_cpp/get_package_share_directory.hpp>
+#include <std_msgs/msg/string.hpp>
 
-#include "ros2plan_planning_system/PlannerInterface/POPFPlannerInterface.h"
-#include "ros2plan_planning_system/PlannerInterface/PlannerInterface.h"
-#include "ros2plan_dispatch_msgs/PlanningService.h"
+#include "ros2plan_dispatch_msgs/srv/planning_service.hpp"
 
-bool plan_received;
-std::string last_plan;
+using namespace std::chrono_literals;
+using PlanningService = ros2plan_dispatch_msgs::srv::PlanningService;
 
-void testCallback(const std_msgs::String::ConstPtr &plan) {
-    ROS_INFO("I heard: [%s]", plan->data.c_str());
-    last_plan = plan->data;
-    plan_received = true;
+// In ROS2 the planner interface advertises its services and topics with relative names and the
+// default (empty) namespace, so they resolve to the root namespace.
+static const char * kPlanningSrv = "/planning_server_params";
+static const char * kPlannerTopic = "/planner_output";
+static const char * kProblemTopic = "/problem_instance";
+
+static std::string pkg_share()
+{
+    return ament_index_cpp::get_package_share_directory("ros2plan_planning_system");
+}
+
+static std::string test_data_dir()
+{
+    return pkg_share() + "/test/pddl/test_domain/";
+}
+
+// Path to the POPF binary installed under the package share directory.
+static std::string popf_command()
+{
+    return "timeout 10 " + pkg_share() + "/common/bin/popf -n DOMAIN PROBLEM";
+}
+
+// Fills the common request fields (data/domain paths + planner command). The caller sets the
+// per-test problem_path.
+static void fill_common_request(PlanningService::Request & req)
+{
+    req.use_problem_topic = false;
+    req.data_path = test_data_dir();
+    req.domain_path = test_data_dir() + "domain.pddl";
+    req.planner_command = popf_command();
+}
+
+// Calls the planning (params) service synchronously and returns whether the call succeeded.
+static bool call_planning_service(rclcpp::Node::SharedPtr node,
+                                  const PlanningService::Request & request_in,
+                                  bool & plan_found)
+{
+    auto client = node->create_client<PlanningService>(kPlanningSrv);
+    if (!client->wait_for_service(10s)) {
+        return false;
+    }
+    auto req = std::make_shared<PlanningService::Request>(request_in);
+    auto future = client->async_send_request(req);
+    if (rclcpp::spin_until_future_complete(node, future, 30s) !=
+        rclcpp::FutureReturnCode::SUCCESS)
+    {
+        return false;
+    }
+    plan_found = future.get()->plan_found;
+    return true;
 }
 
 GTEST_TEST(PlannerInterfaceTests, Test1_plan_found) {
+    auto node = rclcpp::Node::make_shared("planner_interface_test_plan_found");
 
-    ros::NodeHandle nh("~");
+    PlanningService::Request req;
+    fill_common_request(req);
+    req.problem_path = test_data_dir() + "test_problem.pddl";
 
-    std::string srv_name = "/ros2plan_planner_interface/planning_server_params";
-    ros::ServiceClient client = nh.serviceClient<ros2plan_dispatch_msgs::PlanningService>(srv_name);
-    ros2plan_dispatch_msgs::PlanningService srv;
-
-    std::string ros2plan_planning_system_path = ros::package::getPath("ros2plan_planning_system");
-
-    srv.request.use_problem_topic = false;
-    srv.request.data_path = ros2plan_planning_system_path + "/test/pddl/test_domain";
-    srv.request.domain_path = ros2plan_planning_system_path + "/test/pddl/test_domain/domain.pddl";
-    srv.request.problem_path = ros2plan_planning_system_path + "/test/pddl/test_domain/test_problem.pddl";
-    srv.request.planner_command = "timeout 10 " + ros2plan_planning_system_path + "/common/bin/popf -n DOMAIN PROBLEM";
-
-    ros::service::waitForService(srv_name, ros::Duration(3));
-    bool is_srv_call_successful = false;
-    if(client.call(srv))
-        is_srv_call_successful = true;
-    
-    EXPECT_TRUE(is_srv_call_successful);
-    EXPECT_TRUE(srv.response.plan_found);
+    bool plan_found = false;
+    ASSERT_TRUE(call_planning_service(node, req, plan_found));
+    EXPECT_TRUE(plan_found);
 }
 
 GTEST_TEST(PlannerInterfaceTests, Test2_format_published_on_planner_output) {
+    auto node = rclcpp::Node::make_shared("planner_interface_test_output");
 
-    ros::NodeHandle nh("~");
+    std::string last_plan;
+    bool plan_received = false;
+    // The planner output is published with transient_local QoS, so a transient_local subscriber
+    // receives the last published plan even if it connects after publication.
+    auto sub = node->create_subscription<std_msgs::msg::String>(
+        kPlannerTopic, rclcpp::QoS(1).transient_local(),
+        [&](std_msgs::msg::String::SharedPtr msg) {
+            last_plan = msg->data;
+            plan_received = true;
+        });
 
-    ros::Subscriber sub = nh.subscribe<std_msgs::String>("/ros2plan_planner_interface/planner_output", 1000, &testCallback);
-    ros::Publisher pub = nh.advertise<std_msgs::String>("/ros2plan_problem_interface/problem_instance", 1000);
+    PlanningService::Request req;
+    fill_common_request(req);
+    req.problem_path = test_data_dir() + "test_problem.pddl";
 
-    std::string srv_name = "/ros2plan_planner_interface/planning_server_params";
-    ros::ServiceClient client1 = nh.serviceClient<ros2plan_dispatch_msgs::PlanningService>(srv_name);
-    ros2plan_dispatch_msgs::PlanningService srv;
+    bool plan_found = false;
+    ASSERT_TRUE(call_planning_service(node, req, plan_found));
+    EXPECT_TRUE(plan_found);
 
-    std::string ros2plan_planning_system_path = ros::package::getPath("ros2plan_planning_system");
-
-    srv.request.use_problem_topic = false;
-    srv.request.data_path = ros2plan_planning_system_path + "/test/pddl/test_domain/";
-    srv.request.domain_path = ros2plan_planning_system_path + "/test/pddl/test_domain/domain.pddl";
-    srv.request.problem_path = ros2plan_planning_system_path + "/test/pddl/test_domain/test_problem.pddl";
-    srv.request.planner_command = "timeout 10 " + ros2plan_planning_system_path + "/common/bin/popf -n DOMAIN PROBLEM";
-
-    std::ifstream t(ros2plan_planning_system_path + "/test/pddl/test_domain/test_problem.pddl");
-    std::stringstream ss;
-    ss << t.rdbuf();
-
-    std_msgs::String msg;
-    msg.data = ss.str();
-    pub.publish(msg);
-
-    ros::spinOnce();
-
-    ros::Rate loop_rate = 10;
-    loop_rate.sleep();
-
-    ros::service::waitForService(srv_name, ros::Duration(3));
-    client1.call(srv);
-
-    plan_received = false;
-    while (!plan_received && ros::ok()) {
-        loop_rate.sleep();
-        ros::spinOnce();
+    // Wait for the latched plan message.
+    auto start = node->now();
+    while (!plan_received && (node->now() - start) < rclcpp::Duration(10s)) {
+        rclcpp::spin_some(node);
+        rclcpp::sleep_for(50ms);
     }
 
-    std::string known_plan = "0.000: (movetob ball)  [0.001]\n";
+    ASSERT_TRUE(plan_received);
 
-    EXPECT_TRUE(srv.response.plan_found);
+    std::string known_plan = "0.000: (movetob ball)  [0.001]\n";
     ASSERT_EQ(last_plan, known_plan);
 }
 
 GTEST_TEST(PlannerInterfaceTests, Test3_problem_without_solution) {
+    auto node = rclcpp::Node::make_shared("planner_interface_test_no_solution");
 
-    ros::NodeHandle nh("~");
+    PlanningService::Request req;
+    fill_common_request(req);
+    req.problem_path = test_data_dir() + "test_problem_no_solution.pddl";
 
-    std::string srv_name = "/ros2plan_planner_interface/planning_server_params";
-    ros::ServiceClient client = nh.serviceClient<ros2plan_dispatch_msgs::PlanningService>(srv_name);
-    ros2plan_dispatch_msgs::PlanningService srv;
-
-    std::string ros2plan_planning_system_path = ros::package::getPath("ros2plan_planning_system");
-
-    srv.request.use_problem_topic = false;
-    srv.request.data_path = ros2plan_planning_system_path + "/test/pddl/test_domain/";
-    srv.request.domain_path = ros2plan_planning_system_path + "/test/pddl/test_domain/domain.pddl";
-    srv.request.problem_path = ros2plan_planning_system_path + "/test/pddl/test_domain/test_problem_no_solution.pddl";
-    srv.request.planner_command = "timeout 10 " + ros2plan_planning_system_path + "/common/bin/popf -n DOMAIN PROBLEM";
-
-    ros::service::waitForService(srv_name, ros::Duration(3));
-    bool is_srv_call_successful = false;
-    if(client.call(srv))
-        is_srv_call_successful = true;
-
-    EXPECT_TRUE(is_srv_call_successful);
-    EXPECT_FALSE(srv.response.plan_found);
+    bool plan_found = false;
+    ASSERT_TRUE(call_planning_service(node, req, plan_found));
+    EXPECT_FALSE(plan_found);
 }
 
 GTEST_TEST(PlannerInterfaceTests, Test4_invalid_pddl_syntax) {
+    auto node = rclcpp::Node::make_shared("planner_interface_test_invalid_syntax");
 
-    ros::NodeHandle nh("~");
+    PlanningService::Request req;
+    fill_common_request(req);
+    req.problem_path = test_data_dir() + "test_problem_invalid_syntax.pddl";
 
-    std::string srv_name = "/ros2plan_planner_interface/planning_server_params";
-    ros::ServiceClient client1 = nh.serviceClient<ros2plan_dispatch_msgs::PlanningService>(srv_name);
-    ros2plan_dispatch_msgs::PlanningService srv;
-
-    std::string ros2plan_planning_system_path = ros::package::getPath("ros2plan_planning_system");
-
-    srv.request.use_problem_topic = false;
-    srv.request.data_path = ros2plan_planning_system_path + "/test/pddl/test_domain/";
-    srv.request.domain_path = ros2plan_planning_system_path + "/test/pddl/test_domain/domain.pddl";
-    srv.request.problem_path = ros2plan_planning_system_path + "/test/pddl/test_domain/test_problem_invalid_syntax.pddl";
-    srv.request.planner_command = "timeout 10 " + ros2plan_planning_system_path + "/common/bin/popf -n DOMAIN PROBLEM";
-
-    ros::service::waitForService(srv_name, ros::Duration(3));
-    EXPECT_TRUE(client1.call(srv));
-    EXPECT_FALSE(srv.response.plan_found);
+    bool plan_found = false;
+    ASSERT_TRUE(call_planning_service(node, req, plan_found));
+    EXPECT_FALSE(plan_found);
 }
 
-// Run all the tests that were declared with TEST()
-int main(int argc, char **argv) {
-
+int main(int argc, char ** argv)
+{
+    rclcpp::init(argc, argv);
     testing::InitGoogleTest(&argc, argv);
-    ros::init(argc, argv, "PlannerInterfaceTests");
-
-    return RUN_ALL_TESTS();
+    int result = RUN_ALL_TESTS();
+    rclcpp::shutdown();
+    return result;
 }

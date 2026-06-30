@@ -1,79 +1,106 @@
 /**
- * 
+ *
  * Copyright [2019] <KCL King's College London>
- * 
+ *
  * Author: Martin Koling (martinh.koling@kcl.ac.uk)
  * Author: Oscar Lima (oscar.lima@dfki.de)
- * 
- * Unit tests for ROS2Plan knowledge base
+ *
+ * Unit tests for ROS2Plan knowledge base (ROS2 port)
  */
 
-#include <ros/ros.h>
+#include <chrono>
+#include <memory>
 #include <string>
 #include <vector>
-#include <gtest/gtest.h>
 
-#include "ros2plan_knowledge_base/KnowledgeBase.h"
-#include "ros2plan_knowledge_msgs/GetDomainNameService.h"
-#include "ros2plan_knowledge_msgs/GetDomainAttributeService.h"
-#include "ros2plan_knowledge_msgs/KnowledgeItem.h"
-#include "ros2plan_knowledge_msgs/GetDomainOperatorService.h"
-#include "ros2plan_knowledge_msgs/GetDomainOperatorDetailsService.h"
-#include "ros2plan_knowledge_msgs/GetDomainPredicateDetailsService.h"
-#include "ros2plan_knowledge_msgs/GetDomainTypeService.h"
-#include "ros2plan_knowledge_msgs/DomainFormula.h"
-#include "ros2plan_knowledge_msgs/GetInstanceService.h"
-#include "ros2plan_knowledge_msgs/GetAttributeService.h"
-#include "ros2plan_knowledge_msgs/GetMetricService.h"
-#include "ros2plan_knowledge_msgs/KnowledgeUpdateService.h"
-#include "ros2plan_knowledge_msgs/KnowledgeUpdateServiceArray.h"
-#include "ros2plan_knowledge_msgs/KnowledgeQueryService.h"
+#include <gtest/gtest.h>
+#include <rclcpp/rclcpp.hpp>
+#include <std_srvs/srv/empty.hpp>
+
+#include "ros2plan_knowledge_msgs/srv/get_domain_name_service.hpp"
+#include "ros2plan_knowledge_msgs/srv/get_domain_attribute_service.hpp"
+#include "ros2plan_knowledge_msgs/srv/get_domain_operator_service.hpp"
+#include "ros2plan_knowledge_msgs/srv/get_domain_operator_details_service.hpp"
+#include "ros2plan_knowledge_msgs/srv/get_domain_predicate_details_service.hpp"
+#include "ros2plan_knowledge_msgs/srv/get_domain_type_service.hpp"
+#include "ros2plan_knowledge_msgs/srv/get_instance_service.hpp"
+#include "ros2plan_knowledge_msgs/srv/get_attribute_service.hpp"
+#include "ros2plan_knowledge_msgs/srv/get_metric_service.hpp"
+#include "ros2plan_knowledge_msgs/srv/knowledge_update_service.hpp"
+#include "ros2plan_knowledge_msgs/srv/knowledge_update_service_array.hpp"
+#include "ros2plan_knowledge_msgs/srv/knowledge_query_service.hpp"
+#include "ros2plan_knowledge_msgs/msg/knowledge_item.hpp"
+#include "ros2plan_knowledge_msgs/msg/domain_formula.hpp"
+
+using namespace std::chrono_literals;
+
+namespace kmsrv = ros2plan_knowledge_msgs::srv;
+namespace kmmsg = ros2plan_knowledge_msgs::msg;
+
+// In ROS2 the knowledge base advertises its services with the "~/" prefix, so with the node named
+// "ros2plan_knowledge_base" they resolve to node-namespaced paths such as
+// "/ros2plan_knowledge_base/domain/name". These are the same paths the original ROS1 test used.
+
+// Calls a typed service synchronously on a freshly created node. Returns the response shared pointer
+// on success, or nullptr if the service is unavailable or the call did not complete in time.
+template <typename ServiceT>
+static typename ServiceT::Response::SharedPtr call_service(
+    const std::string & srv_name,
+    const typename ServiceT::Request::SharedPtr & req)
+{
+    auto node = rclcpp::Node::make_shared("knowledge_base_test_client");
+    auto client = node->create_client<ServiceT>(srv_name);
+    if (!client->wait_for_service(10s)) {
+        return nullptr;
+    }
+    auto future = client->async_send_request(req);
+    if (rclcpp::spin_until_future_complete(node, future, 10s) !=
+        rclcpp::FutureReturnCode::SUCCESS)
+    {
+        return nullptr;
+    }
+    return future.get();
+}
+
+// Convenience overload for services whose request carries no caller-set fields (a default-constructed
+// request is sent).
+template <typename ServiceT>
+static typename ServiceT::Response::SharedPtr call_service(const std::string & srv_name)
+{
+    return call_service<ServiceT>(srv_name, std::make_shared<typename ServiceT::Request>());
+}
 
 GTEST_TEST(KnowledgeBaseTests, Test1_domain_name) {
 
-    ros::NodeHandle nh("~");
-
     std::string srv_name = "/ros2plan_knowledge_base/domain/name";
-    ros::ServiceClient client1 = nh.serviceClient<ros2plan_knowledge_msgs::GetDomainNameService>(srv_name);
-    ros2plan_knowledge_msgs::GetDomainNameService srv;
+    auto res = call_service<kmsrv::GetDomainNameService>(srv_name);
 
-    ros::service::waitForService(srv_name, ros::Duration(1));
-    client1.call(srv);
-
-    ASSERT_EQ("driverlog-simple", srv.response.domain_name);
+    ASSERT_TRUE(res != nullptr);
+    ASSERT_EQ("driverlog-simple", res->domain_name);
 }
 
 GTEST_TEST(KnowledgeBaseTests, Test2_domain_functions) {
 
-    ros::NodeHandle nh("~");
-
     std::string srv_name = "/ros2plan_knowledge_base/domain/functions";
-    ros::ServiceClient client1 = nh.serviceClient<ros2plan_knowledge_msgs::GetDomainAttributeService>(srv_name);
-    ros2plan_knowledge_msgs::GetDomainAttributeService srv;
+    auto res = call_service<kmsrv::GetDomainAttributeService>(srv_name);
 
-    ros::service::waitForService(srv_name, ros::Duration(1));
-    client1.call(srv);
-
+    ASSERT_TRUE(res != nullptr);
     // Amazon-domain does not contain any functions
-    EXPECT_FALSE(srv.response.items.size());
+    EXPECT_FALSE(res->items.size());
 }
 
 GTEST_TEST(KnowledgeBaseTests, Test3_domain_predicates) {
 
-    ros::NodeHandle nh("~");
-
     std::string srv_name = "/ros2plan_knowledge_base/domain/predicates";
-    ros::ServiceClient client1 = nh.serviceClient<ros2plan_knowledge_msgs::GetDomainAttributeService>(srv_name);
-    ros2plan_knowledge_msgs::GetDomainAttributeService srv;
 
     std::vector<std::string> expected_predicate_names = {"at", "in", "link", "path"};
 
-    ros::service::waitForService(srv_name, ros::Duration(1));
-    client1.call(srv);
+    auto res = call_service<kmsrv::GetDomainAttributeService>(srv_name);
+    ASSERT_TRUE(res != nullptr);
 
     std::vector<std::string> actual_predicate_names;
 
-    for (auto rit=srv.response.items.begin(); rit!=srv.response.items.end(); rit++) {
+    for (auto rit=res->items.begin(); rit!=res->items.end(); rit++) {
         actual_predicate_names.push_back(rit->name);
     }
 
@@ -82,20 +109,16 @@ GTEST_TEST(KnowledgeBaseTests, Test3_domain_predicates) {
 
 GTEST_TEST(KnowledgeBaseTests, Test4_domain_operators) {
 
-    ros::NodeHandle nh("~");
-
     std::string srv_name = "/ros2plan_knowledge_base/domain/operators";
-    ros::ServiceClient client1 = nh.serviceClient<ros2plan_knowledge_msgs::GetDomainOperatorService>(srv_name);
-    ros2plan_knowledge_msgs::GetDomainOperatorService srv;
 
     std::vector<std::string> expected_operator_names = {"load-truck", "unload-truck", "board-truck", "get-out", "drive-truck", "walk"};
 
-    ros::service::waitForService(srv_name, ros::Duration(1));
-    client1.call(srv);
+    auto res = call_service<kmsrv::GetDomainOperatorService>(srv_name);
+    ASSERT_TRUE(res != nullptr);
 
     std::vector<std::string> actual_operator_names;
 
-    for (auto rit=srv.response.operators.begin(); rit!=srv.response.operators.end(); rit++) {
+    for (auto rit=res->operators.begin(); rit!=res->operators.end(); rit++) {
         actual_operator_names.push_back(rit->name);
     }
 
@@ -104,20 +127,16 @@ GTEST_TEST(KnowledgeBaseTests, Test4_domain_operators) {
 
 GTEST_TEST(KnowledgeBaseTests, Test5_domain_types){
 
-    ros::NodeHandle nh("~");
-
     std::string srv_name = "/ros2plan_knowledge_base/domain/types";
-    ros::ServiceClient client1 = nh.serviceClient<ros2plan_knowledge_msgs::GetDomainTypeService>(srv_name);
-    ros2plan_knowledge_msgs::GetDomainTypeService srv;
 
     std::vector<std::string> expected_type_names = {"place", "locatable", "driver", "truck", "item"};
     std::vector<std::string> expected_super_type_names = {"object", "object", "locatable", "locatable", "locatable"};
 
-    ros::service::waitForService(srv_name, ros::Duration(1));
-    client1.call(srv);
+    auto res = call_service<kmsrv::GetDomainTypeService>(srv_name);
+    ASSERT_TRUE(res != nullptr);
 
-    std::vector<std::string> actual_type_names = srv.response.types;
-    std::vector<std::string> actual_super_type_names = srv.response.super_types;
+    std::vector<std::string> actual_type_names = res->types;
+    std::vector<std::string> actual_super_type_names = res->super_types;
 
     ASSERT_EQ(expected_type_names, actual_type_names);
     ASSERT_EQ(expected_super_type_names, actual_super_type_names);
@@ -125,96 +144,81 @@ GTEST_TEST(KnowledgeBaseTests, Test5_domain_types){
 
 GTEST_TEST(KnowledgeBaseTests, Test6_domain_operator_details) {
 
-    ros::NodeHandle nh("~");
-
     std::string srv_name = "/ros2plan_knowledge_base/domain/operator_details";
-    ros::ServiceClient client1 = nh.serviceClient<ros2plan_knowledge_msgs::GetDomainOperatorDetailsService>(srv_name);
-    ros2plan_knowledge_msgs::GetDomainOperatorDetailsService srv;
 
-    srv.request.name = "load-truck";
+    auto req = std::make_shared<kmsrv::GetDomainOperatorDetailsService::Request>();
+    req->name = "load-truck";
 
-    ros::service::waitForService(srv_name, ros::Duration(1));
-    client1.call(srv);
+    auto res = call_service<kmsrv::GetDomainOperatorDetailsService>(srv_name, req);
+    ASSERT_TRUE(res != nullptr);
 
-    std::string detailed_operator_name = srv.response.op.formula.name;
+    std::string detailed_operator_name = res->op.formula.name;
 
-    ASSERT_EQ(srv.request.name, detailed_operator_name);
+    ASSERT_EQ(req->name, detailed_operator_name);
 }
 
 GTEST_TEST(KnowledgeBaseTests, Test7_domain_predicate_details) {
 
-    ros::NodeHandle nh("~");
-
     std::string srv_name = "/ros2plan_knowledge_base/domain/predicate_details";
-    ros::ServiceClient client1 = nh.serviceClient<ros2plan_knowledge_msgs::GetDomainPredicateDetailsService>(srv_name);
-    ros2plan_knowledge_msgs::GetDomainPredicateDetailsService srv;
 
-    srv.request.name = "path";
+    auto req = std::make_shared<kmsrv::GetDomainPredicateDetailsService::Request>();
+    req->name = "path";
 
-    ros::service::waitForService(srv_name, ros::Duration(1));
-    client1.call(srv);
+    auto res = call_service<kmsrv::GetDomainPredicateDetailsService>(srv_name, req);
+    ASSERT_TRUE(res != nullptr);
 
-    std::string detailed_predicate_name = srv.response.predicate.name;
+    std::string detailed_predicate_name = res->predicate.name;
 
-    ASSERT_EQ(srv.request.name, detailed_predicate_name);
+    ASSERT_EQ(req->name, detailed_predicate_name);
 }
 
 GTEST_TEST(KnowledgeBaseTests, Test8_state_instances){
 
-    ros::NodeHandle nh("~");
-
     std::string srv_name = "/ros2plan_knowledge_base/state/instances";
-    ros::ServiceClient client1 = nh.serviceClient<ros2plan_knowledge_msgs::GetInstanceService>(srv_name);
-    ros2plan_knowledge_msgs::GetInstanceService srv;
 
     std::vector<std::string> expected_instance_names = {"home", "amazon", "london", "myhouse"};
 
-    srv.request.type_name = "place";
+    auto req = std::make_shared<kmsrv::GetInstanceService::Request>();
+    req->type_name = "place";
 
-    ros::service::waitForService(srv_name, ros::Duration(1));
-    client1.call(srv);
+    auto res = call_service<kmsrv::GetInstanceService>(srv_name, req);
+    ASSERT_TRUE(res != nullptr);
 
-    std::vector<std::string> actual_instance_names = srv.response.instances;
+    std::vector<std::string> actual_instance_names = res->instances;
 
     ASSERT_EQ(expected_instance_names, actual_instance_names);
 }
 
 GTEST_TEST(KnowledgeBaseTests, Test9_state_functions){
 
-    ros::NodeHandle nh("~");
-
     std::string srv_name = "/ros2plan_knowledge_base/state/functions";
-    ros::ServiceClient client1 = nh.serviceClient<ros2plan_knowledge_msgs::GetAttributeService>(srv_name);
-    ros2plan_knowledge_msgs::GetAttributeService srv;
 
-    srv.request.predicate_name = "link";
+    auto req = std::make_shared<kmsrv::GetAttributeService::Request>();
+    req->predicate_name = "link";
 
-    ros::service::waitForService(srv_name, ros::Duration(1));
-    client1.call(srv);
+    auto res = call_service<kmsrv::GetAttributeService>(srv_name, req);
+    ASSERT_TRUE(res != nullptr);
 
     // Amazon-domain does not contain any functions
-    EXPECT_FALSE(srv.response.attributes.size());
+    EXPECT_FALSE(res->attributes.size());
 }
 
 GTEST_TEST(KnowledgeBaseTests, Test10_state_propositions){
 
-    ros::NodeHandle nh("~");
-
     std::string srv_name = "/ros2plan_knowledge_base/state/propositions";
-    ros::ServiceClient client1 = nh.serviceClient<ros2plan_knowledge_msgs::GetAttributeService>(srv_name);
-    ros2plan_knowledge_msgs::GetAttributeService srv;
 
     // Expected to be 4 propositions with name matching "link"
     std::vector<std::string> expected_propositions_names = {"link", "link", "link", "link"};
 
-    srv.request.predicate_name = "link";
+    auto req = std::make_shared<kmsrv::GetAttributeService::Request>();
+    req->predicate_name = "link";
 
-    ros::service::waitForService(srv_name, ros::Duration(1));
-    client1.call(srv);
+    auto res = call_service<kmsrv::GetAttributeService>(srv_name, req);
+    ASSERT_TRUE(res != nullptr);
 
     std::vector<std::string> actual_propositions_names;
 
-    for (auto rit=srv.response.attributes.begin(); rit!=srv.response.attributes.end(); rit++) {
+    for (auto rit=res->attributes.begin(); rit!=res->attributes.end(); rit++) {
         actual_propositions_names.push_back(rit->attribute_name);
     }
 
@@ -223,154 +227,138 @@ GTEST_TEST(KnowledgeBaseTests, Test10_state_propositions){
 
 GTEST_TEST(KnowledgeBaseTests, Test11_state_goals){
 
-    ros::NodeHandle nh("~");
-
     std::string srv_name = "/ros2plan_knowledge_base/state/goals";
-    ros::ServiceClient client1 = nh.serviceClient<ros2plan_knowledge_msgs::GetAttributeService>(srv_name);
-    ros2plan_knowledge_msgs::GetAttributeService srv;
 
     //Regardless of request data the response should be the same.
-    srv.request.predicate_name = "at";
-    ros::service::waitForService(srv_name, ros::Duration(1));
-    client1.call(srv);
-    ASSERT_EQ("at", srv.response.attributes[0].attribute_name);
+    {
+        auto req = std::make_shared<kmsrv::GetAttributeService::Request>();
+        req->predicate_name = "at";
+        auto res = call_service<kmsrv::GetAttributeService>(srv_name, req);
+        ASSERT_TRUE(res != nullptr);
+        ASSERT_EQ("at", res->attributes[0].attribute_name);
+    }
 
-    srv.request.predicate_name = "";
-    ros::service::waitForService(srv_name, ros::Duration(1));
-    client1.call(srv);
-    ASSERT_EQ("at", srv.response.attributes[0].attribute_name);
-    // check for size of arguments to be equal to a known value (there is 1 goal in the problem file)
-    EXPECT_TRUE(srv.response.attributes.size());
+    {
+        auto req = std::make_shared<kmsrv::GetAttributeService::Request>();
+        req->predicate_name = "";
+        auto res = call_service<kmsrv::GetAttributeService>(srv_name, req);
+        ASSERT_TRUE(res != nullptr);
+        ASSERT_EQ("at", res->attributes[0].attribute_name);
+        // check for size of arguments to be equal to a known value (there is 1 goal in the problem file)
+        EXPECT_TRUE(res->attributes.size());
+    }
 
-    srv.request.predicate_name = "dgfhfhjfgh";
-    ros::service::waitForService(srv_name, ros::Duration(1));
-    client1.call(srv);
-    ASSERT_EQ("at", srv.response.attributes[0].attribute_name);
+    {
+        auto req = std::make_shared<kmsrv::GetAttributeService::Request>();
+        req->predicate_name = "dgfhfhjfgh";
+        auto res = call_service<kmsrv::GetAttributeService>(srv_name, req);
+        ASSERT_TRUE(res != nullptr);
+        ASSERT_EQ("at", res->attributes[0].attribute_name);
+    }
 }
 
 GTEST_TEST(KnowledgeBaseTests, Test12_state_metric){
 
-    ros::NodeHandle nh("~");
-
     std::string srv_name = "/ros2plan_knowledge_base/state/metric";
-    ros::ServiceClient client1 = nh.serviceClient<ros2plan_knowledge_msgs::GetMetricService>(srv_name);
-    ros2plan_knowledge_msgs::GetMetricService srv;
 
-    ros::service::waitForService(srv_name, ros::Duration(1));
-    client1.call(srv);
+    auto res = call_service<kmsrv::GetMetricService>(srv_name);
+    ASSERT_TRUE(res != nullptr);
 
     // Amazon-problem does not have any metric
 
-    ASSERT_EQ("", srv.response.metric.attribute_name);
+    ASSERT_EQ("", res->metric.attribute_name);
 }
 
 GTEST_TEST(KnowledgeBaseTests, Test13_state_til){
 
-    ros::NodeHandle nh("~");
-
     std::string srv_name = "/ros2plan_knowledge_base/state/timed_knowledge";
-    ros::ServiceClient client1 = nh.serviceClient<ros2plan_knowledge_msgs::GetAttributeService>(srv_name);
-    ros2plan_knowledge_msgs::GetAttributeService srv;
 
-    srv.request.predicate_name = "at";
+    auto req = std::make_shared<kmsrv::GetAttributeService::Request>();
+    req->predicate_name = "at";
 
-    ros::service::waitForService(srv_name, ros::Duration(1));
-    client1.call(srv);
+    auto res = call_service<kmsrv::GetAttributeService>(srv_name, req);
+    ASSERT_TRUE(res != nullptr);
 
     // Amazon-problem does not have timed-initial-literals(TILs).
 
-    EXPECT_FALSE(srv.response.attributes.size());
+    EXPECT_FALSE(res->attributes.size());
 }
 
 GTEST_TEST(KnowledgeBaseTests, Test14_clear){
 
-    ros::NodeHandle nh("~");
-
     std::string srv_name1 = "/ros2plan_knowledge_base/state/goals";
-    ros::ServiceClient client1 = nh.serviceClient<ros2plan_knowledge_msgs::GetAttributeService>(srv_name1);
-    ros2plan_knowledge_msgs::GetAttributeService srv;
 
-    srv.request.predicate_name = "anystring";
-    ros::service::waitForService(srv_name1, ros::Duration(1));
-    client1.call(srv);
-    // Check that goal attribute_name is "at"
-    ASSERT_EQ("at", srv.response.attributes[0].attribute_name);
+    {
+        auto req = std::make_shared<kmsrv::GetAttributeService::Request>();
+        req->predicate_name = "anystring";
+        auto res = call_service<kmsrv::GetAttributeService>(srv_name1, req);
+        ASSERT_TRUE(res != nullptr);
+        // Check that goal attribute_name is "at"
+        ASSERT_EQ("at", res->attributes[0].attribute_name);
+    }
 
     std::string srv_name2 = "/ros2plan_knowledge_base/clear";
-    ros::ServiceClient client2 = nh.serviceClient<std_srvs::Empty>(srv_name2);
-    std_srvs::Empty emptySrv;
+    auto clear_res = call_service<std_srvs::srv::Empty>(srv_name2);
+    ASSERT_TRUE(clear_res != nullptr);
 
-    ros::service::waitForService(srv_name2, ros::Duration(1));
-    client2.call(emptySrv);
-
-    ros::service::waitForService(srv_name1, ros::Duration(1));
-    client1.call(srv);
-    // Check that no goal exists after knowledge base is cleared
-    EXPECT_FALSE(srv.response.attributes.size());
+    {
+        auto req = std::make_shared<kmsrv::GetAttributeService::Request>();
+        req->predicate_name = "anystring";
+        auto res = call_service<kmsrv::GetAttributeService>(srv_name1, req);
+        ASSERT_TRUE(res != nullptr);
+        // Check that no goal exists after knowledge base is cleared
+        EXPECT_FALSE(res->attributes.size());
+    }
 }
 
 GTEST_TEST(KnowledgeBaseTests, Test15_update){
 
-    ros::NodeHandle nh("~");
-
     std::string srv_name1 = "/ros2plan_knowledge_base/clear";
-    ros::ServiceClient client2 = nh.serviceClient<std_srvs::Empty>(srv_name1);
-    std_srvs::Empty emptySrv;
-
-    ros::service::waitForService(srv_name1, ros::Duration(1));
-    client2.call(emptySrv);
+    auto clear_res = call_service<std_srvs::srv::Empty>(srv_name1);
+    ASSERT_TRUE(clear_res != nullptr);
 
     std::string srv_name2 = "/ros2plan_knowledge_base/update";
-    ros::ServiceClient client1 = nh.serviceClient<ros2plan_knowledge_msgs::KnowledgeUpdateService>(srv_name2);
-    ros2plan_knowledge_msgs::KnowledgeUpdateService srv;
 
-    ros2plan_knowledge_msgs::KnowledgeItem knowledgeItem;
+    kmmsg::KnowledgeItem knowledgeItem;
 
     knowledgeItem.knowledge_type = 0;
     knowledgeItem.instance_type = "driver";
     // knowledgeItem.instance_name = "Martin"; // TODO: uncomment when #199 is solved
     knowledgeItem.instance_name = "martin"; // TODO: delete once #199 is solved
 
-    srv.request.update_type = 0;
-    srv.request.knowledge = knowledgeItem;
+    auto req = std::make_shared<kmsrv::KnowledgeUpdateService::Request>();
+    req->update_type = kmsrv::KnowledgeUpdateService::Request::ADD_KNOWLEDGE;
+    req->knowledge = knowledgeItem;
 
-    ros::service::waitForService(srv_name2, ros::Duration(1));
-    client1.call(srv);
+    auto res = call_service<kmsrv::KnowledgeUpdateService>(srv_name2, req);
+    ASSERT_TRUE(res != nullptr);
 
-    EXPECT_TRUE(srv.response.success);
+    EXPECT_TRUE(res->success);
 
     std::string srv_name3 = "/ros2plan_knowledge_base/state/instances";
-    ros::ServiceClient client3 = nh.serviceClient<ros2plan_knowledge_msgs::GetInstanceService>(srv_name3);
-    ros2plan_knowledge_msgs::GetInstanceService instanceSrv;
 
     std::vector<std::string> expected_added_instance = {"martin"};
 
-    instanceSrv.request.type_name = "driver";
+    auto instanceReq = std::make_shared<kmsrv::GetInstanceService::Request>();
+    instanceReq->type_name = "driver";
 
-    ros::service::waitForService(srv_name3, ros::Duration(1));
-    client3.call(instanceSrv);
+    auto instanceRes = call_service<kmsrv::GetInstanceService>(srv_name3, instanceReq);
+    ASSERT_TRUE(instanceRes != nullptr);
 
-    ASSERT_EQ(expected_added_instance, instanceSrv.response.instances);
+    ASSERT_EQ(expected_added_instance, instanceRes->instances);
 }
 
 GTEST_TEST(KnowledgeBaseTests, Test16_update_array){
 
-    ros::NodeHandle nh("~");
-
     std::string srv_name1 = "/ros2plan_knowledge_base/clear";
-    ros::ServiceClient client1 = nh.serviceClient<std_srvs::Empty>(srv_name1);
-    std_srvs::Empty emptySrv;
-
-    ros::service::waitForService(srv_name1, ros::Duration(1));
-    client1.call(emptySrv);
+    auto clear_res = call_service<std_srvs::srv::Empty>(srv_name1);
+    ASSERT_TRUE(clear_res != nullptr);
 
     std::string srv_name2 = "/ros2plan_knowledge_base/update_array";
-    ros::ServiceClient client2 = nh.serviceClient<ros2plan_knowledge_msgs::KnowledgeUpdateServiceArray>(srv_name2);
-    ros2plan_knowledge_msgs::KnowledgeUpdateServiceArray srv;
 
-    ros2plan_knowledge_msgs::KnowledgeItem knowledgeItem1;
-    ros2plan_knowledge_msgs::KnowledgeItem knowledgeItem2;
-    ros2plan_knowledge_msgs::KnowledgeItem knowledgeItem3;
+    kmmsg::KnowledgeItem knowledgeItem1;
+    kmmsg::KnowledgeItem knowledgeItem2;
+    kmmsg::KnowledgeItem knowledgeItem3;
 
     knowledgeItem1.knowledge_type = 0;
     knowledgeItem1.instance_type = "driver";
@@ -384,26 +372,23 @@ GTEST_TEST(KnowledgeBaseTests, Test16_update_array){
     knowledgeItem3.instance_type = "place";
     knowledgeItem3.instance_name = "london";
 
-    srv.request.update_type = {0, 0, 0};
-    srv.request.knowledge = {knowledgeItem1, knowledgeItem2, knowledgeItem3};
+    auto req = std::make_shared<kmsrv::KnowledgeUpdateServiceArray::Request>();
+    req->update_type = {0, 0, 0};
+    req->knowledge = {knowledgeItem1, knowledgeItem2, knowledgeItem3};
 
-    ros::service::waitForService(srv_name2, ros::Duration(1));
-    client2.call(srv);
+    auto res = call_service<kmsrv::KnowledgeUpdateServiceArray>(srv_name2, req);
+    ASSERT_TRUE(res != nullptr);
 
-    EXPECT_TRUE(srv.response.success);
+    EXPECT_TRUE(res->success);
 }
 
 GTEST_TEST(KnowledgeBaseTests, Test17_query){
 
-    ros::NodeHandle nh("~");
-
     std::string srv_name = "/ros2plan_knowledge_base/query_state";
-    ros::ServiceClient client1 = nh.serviceClient<ros2plan_knowledge_msgs::KnowledgeQueryService>(srv_name);
-    ros2plan_knowledge_msgs::KnowledgeQueryService srv;
 
-    ros2plan_knowledge_msgs::KnowledgeItem knowledgeItem1;
-    ros2plan_knowledge_msgs::KnowledgeItem knowledgeItem2;
-    ros2plan_knowledge_msgs::KnowledgeItem knowledgeItem3;
+    kmmsg::KnowledgeItem knowledgeItem1;
+    kmmsg::KnowledgeItem knowledgeItem2;
+    kmmsg::KnowledgeItem knowledgeItem3;
 
     knowledgeItem1.knowledge_type = 0;
     knowledgeItem1.instance_type = "driver";
@@ -417,31 +402,32 @@ GTEST_TEST(KnowledgeBaseTests, Test17_query){
     knowledgeItem3.instance_type = "driver";
     knowledgeItem3.instance_name = "Jonas";
 
-    srv.request.knowledge = {knowledgeItem1, knowledgeItem2, knowledgeItem3};
+    auto req = std::make_shared<kmsrv::KnowledgeQueryService::Request>();
+    req->knowledge = {knowledgeItem1, knowledgeItem2, knowledgeItem3};
 
-    ros::service::waitForService(srv_name, ros::Duration(1));
-    client1.call(srv);
+    auto res = call_service<kmsrv::KnowledgeQueryService>(srv_name, req);
+    ASSERT_TRUE(res != nullptr);
 
-    EXPECT_FALSE(srv.response.all_true);
+    EXPECT_FALSE(res->all_true);
 
     std::vector<bool> expected_results = {true, true, false};
 
     std::vector<bool> actual_results;
 
-    for (auto rit=srv.response.results.begin(); rit!=srv.response.results.end(); rit++) {
+    for (auto rit=res->results.begin(); rit!=res->results.end(); rit++) {
         actual_results.push_back(*rit);
     }
 
     ASSERT_EQ(expected_results, actual_results);
 
-    ASSERT_EQ("Jonas", srv.response.false_knowledge[0].instance_name);
+    ASSERT_EQ("Jonas", res->false_knowledge[0].instance_name);
 }
 
 // Run all the tests that were declared with TEST()
 int main(int argc, char **argv) {
-
+    rclcpp::init(argc, argv);
     testing::InitGoogleTest(&argc, argv);
-    ros::init(argc, argv, "KnowledgeBaseTests");
-
-    return RUN_ALL_TESTS();
+    int result = RUN_ALL_TESTS();
+    rclcpp::shutdown();
+    return result;
 }
