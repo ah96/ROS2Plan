@@ -112,8 +112,8 @@ Planning System
 ## Key ROS2 differences from ROSPlan
 
 A full description of every change made during the port is in
-[ros2_migration.md](ros2_migration.md) and the accompanying
-[ros2_migration.pdf](ros2_migration.pdf).  A short summary:
+[docs/migration/ros2_migration.md](docs/migration/ros2_migration.md) (a PDF can be generated
+from it — see [below](#generating-the-migration-pdf)).  A short summary:
 
 - All nodes inherit `rclcpp::Node` and run under `MultiThreadedExecutor`
 - Latched publishers use `rclcpp::QoS(1).transient_local()`; **subscribers must also declare
@@ -165,7 +165,7 @@ The migration documentation can be regenerated from the markdown source:
 
 ```bash
 pip install weasyprint markdown
-python3 md_to_pdf.py ros2_migration.md ros2_migration.pdf
+python3 docs/migration/md_to_pdf.py    # writes docs/migration/ros2_migration.pdf
 ```
 
 ## License

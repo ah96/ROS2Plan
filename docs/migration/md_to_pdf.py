@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Convert ros2_migration.md to a styled PDF using markdown + weasyprint."""
 
+import os
 import sys
 import markdown
 from weasyprint import HTML, CSS
@@ -179,6 +180,7 @@ def convert(md_path, out_path):
     print(f"Written: {out_path}")
 
 if __name__ == '__main__':
-    md  = sys.argv[1] if len(sys.argv) > 1 else 'ros2_migration.md'
-    out = sys.argv[2] if len(sys.argv) > 2 else 'ros2_migration.pdf'
+    HERE = os.path.dirname(os.path.abspath(__file__))
+    md  = sys.argv[1] if len(sys.argv) > 1 else os.path.join(HERE, 'ros2_migration.md')
+    out = sys.argv[2] if len(sys.argv) > 2 else os.path.join(HERE, 'ros2_migration.pdf')
     convert(md, out)

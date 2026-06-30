@@ -10,8 +10,8 @@ Initial release of ROS2Plan: full port of ROSPlan to ROS2 Humble Hawksbill on Ub
 
 - All 9 ROSPlan packages ported and building under `ament_cmake` / `ament_cmake_python`
 - Python launch files replacing all ROS1 XML launch files
-- Migration guide: `ros2_migration.md` and `ros2_migration.pdf`
-- PDF generation script: `md_to_pdf.py`
+- Migration guide: `docs/migration/ros2_migration.md` (PDF generated on demand)
+- PDF generation script: `docs/migration/md_to_pdf.py`
 
 ### Changed
 

@@ -69,4 +69,4 @@ knowledge base from live topic and service data.
 
 ROS2Plan targets **ROS 2 Humble** on **Ubuntu 22.04**, built with `ament_cmake` /
 `ament_cmake_python` and C++17. For the details of how the framework was ported from
-ROS 1, see the migration guide ([ros2_migration.md](../ros2_migration.md)).
+ROS 1, see the migration guide ([ros2_migration.md](migration/ros2_migration.md)).
