@@ -232,4 +232,69 @@ install(DIRECTORY launch/
 ament_export_targets(ros2plan_action_interfaceTargets HAS_LIBRARY_TARGET)
 ament_export_dependencies(${DEPS})
 
+#############
+## Testing ##
+#############
+
+if(BUILD_TESTING)
+  find_package(ament_cmake_gtest REQUIRED)
+  find_package(launch_testing_ament_cmake REQUIRED)
+  find_package(ament_index_cpp REQUIRED)
+
+  # Pure unit test (no ROS runtime needed): CHIMP problem-file generation
+  ament_add_gtest(chimp_problem_test
+    test/src/CHIMPProblemTests.cpp
+    src/ProblemGeneration/CHIMPProblem.cpp
+    src/ProblemGeneration/CHIMPFluent.cpp)
+  target_include_directories(chimp_problem_test PRIVATE include)
+
+  # ---- Integration tests (gtest executable driven by a launch_testing harness) ----
+  # Problem interface
+  ament_add_gtest_executable(problem_interface_test test/src/ProblemInterfaceTests.cpp)
+  ament_target_dependencies(problem_interface_test
+    rclcpp std_msgs ros2plan_dispatch_msgs ament_index_cpp)
+  add_launch_test(test/launch/problem_interface_test.py
+    TARGET problem_interface_launch_test
+    ARGS "test_exe:=$<TARGET_FILE:problem_interface_test>"
+    TIMEOUT 120)
+
+  # Parsing interface
+  ament_add_gtest_executable(parsing_interface_test test/src/ParsingInterfaceTests.cpp)
+  ament_target_dependencies(parsing_interface_test
+    rclcpp std_srvs ros2plan_dispatch_msgs ament_index_cpp)
+  add_launch_test(test/launch/parsing_interface_test.py
+    TARGET parsing_interface_launch_test
+    ARGS "test_exe:=$<TARGET_FILE:parsing_interface_test>"
+    TIMEOUT 120)
+
+  # Planner interface (POPF — full KB -> problem -> plan chain)
+  ament_add_gtest_executable(planner_interface_test test/src/PlannerInterfaceTests.cpp)
+  ament_target_dependencies(planner_interface_test
+    rclcpp std_msgs ros2plan_dispatch_msgs ament_index_cpp)
+  add_launch_test(test/launch/planner_interface_test.py
+    TARGET planner_interface_launch_test
+    ARGS "test_exe:=$<TARGET_FILE:planner_interface_test>"
+    TIMEOUT 180)
+
+  # Plan dispatch (full KB -> problem -> plan -> parse -> dispatch chain)
+  ament_add_gtest_executable(plan_dispatch_test test/src/PlanDispatchTests.cpp)
+  ament_target_dependencies(plan_dispatch_test
+    rclcpp std_msgs std_srvs ros2plan_dispatch_msgs)
+  add_launch_test(test/launch/plan_dispatch_test.py
+    TARGET plan_dispatch_launch_test
+    ARGS "test_exe:=$<TARGET_FILE:plan_dispatch_test>"
+    TIMEOUT 180)
+
+  # CHIMP planner interface — only when the (Java) CHIMP planner is built.
+  if(ROS2PLAN_COMPILE_CHIMP)
+    ament_add_gtest_executable(chimp_planner_interface_test test/src/ChimpPlannerInterfaceTests.cpp)
+    ament_target_dependencies(chimp_planner_interface_test
+      rclcpp std_msgs ros2plan_dispatch_msgs ament_index_cpp)
+    add_launch_test(test/launch/chimp_planner_interface_test.py
+      TARGET chimp_planner_interface_launch_test
+      ARGS "test_exe:=$<TARGET_FILE:chimp_planner_interface_test>"
+      TIMEOUT 180)
+  endif()
+endif()
+
 ament_package()

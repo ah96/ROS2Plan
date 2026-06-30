@@ -34,9 +34,6 @@ namespace KCL_ros2plan {
     class KnowledgeBase : public rclcpp::Node
     {
     private:
-        // callback group for all service servers (prevents re-entrant calls)
-        rclcpp::CallbackGroup::SharedPtr srv_cbg_;
-
         rclcpp::Service<ros2plan_knowledge_msgs::srv::GetDomainNameService>::SharedPtr domainServer1;
         rclcpp::Service<ros2plan_knowledge_msgs::srv::GetDomainTypeService>::SharedPtr domainServer2;
         rclcpp::Service<ros2plan_knowledge_msgs::srv::GetDomainAttributeService>::SharedPtr domainServer3;
@@ -63,6 +60,10 @@ namespace KCL_ros2plan {
         rclcpp::TimerBase::SharedPtr til_timer_;
 
     protected:
+
+        // callback group for all service servers (prevents re-entrant calls);
+        // shared with subclasses (e.g. RDDLKnowledgeBase) that register extra services
+        rclcpp::CallbackGroup::SharedPtr srv_cbg_;
 
         rclcpp::Publisher<ros2plan_knowledge_msgs::msg::StatusUpdate>::SharedPtr status_pub_;
 

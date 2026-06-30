@@ -3,20 +3,19 @@
 //
 
 #include <ros2plan_knowledge_base/PPDDLUtils.h>
-#include "ros/ros.h"
 
 namespace KCL_ros2plan {
 
 
     void PPDDLUtils::fillPreconditions(const ppddl_parser::StateFormula &precondition, PPDDLDomainPtr domain,
-                                               ros2plan_knowledge_msgs::DomainFormula &op_head,
+                                               ros2plan_knowledge_msgs::msg::DomainFormula &op_head,
                                                vectorDF &out_pos_cond, vectorDF &out_neg_cond,
                                                std::map<ppddl_parser::Term, std::string> &var_decl,
                                                std::map<std::string, int> &var_names) {
         // check which type of condition we have
         auto a = dynamic_cast<const ppddl_parser::Atom*>(&precondition);
         if (a != nullptr) {
-            ros2plan_knowledge_msgs::DomainFormula df = getAtom(a, domain, var_decl);
+            ros2plan_knowledge_msgs::msg::DomainFormula df = getAtom(a, domain, var_decl);
             out_pos_cond.push_back(df);
             return;
         }
@@ -43,11 +42,11 @@ namespace KCL_ros2plan {
 
         auto ex = dynamic_cast<const ppddl_parser::Exists*>(&precondition);
         if (ex != nullptr) {
-            ROS_INFO("KCL (PPDDLKnowledgeBase) Adding exists variables as action parameters.");
+            RCLCPP_INFO(rclcpp::get_logger("PPDDLUtils"), "KCL (PPDDLKnowledgeBase) Adding exists variables as action parameters.");
             // Add parameters to the operator
             ppddl_parser::VariableList params = ex->parameters();
             for (auto it = params.begin(); it != params.end(); ++it) {
-                diagnostic_msgs::KeyValue param;
+                diagnostic_msgs::msg::KeyValue param;
                 param.value = domain->types().typestring(domain->terms().type(*it)); // type name
                 std::string vname = param.value.substr(0, 1);
                 if (var_names.find(vname) == var_names.end()) var_names[vname] = 0;
@@ -117,7 +116,7 @@ namespace KCL_ros2plan {
         auto se = dynamic_cast<const ppddl_parser::SimpleEffect*>(&effect);
         if (se != nullptr) {
             const ppddl_parser::Atom *a = &se->atom();
-            ros2plan_knowledge_msgs::DomainFormula df = getAtom(a, domain, var_decl);
+            ros2plan_knowledge_msgs::msg::DomainFormula df = getAtom(a, domain, var_decl);
 
             auto ae = dynamic_cast<const ppddl_parser::AddEffect*>(se);
             if (ae != nullptr) out_add_eff.push_back(df);
@@ -142,9 +141,9 @@ namespace KCL_ros2plan {
         auto pe = dynamic_cast<const ppddl_parser::ProbabilisticEffect*>(&effect);
         if (pe != nullptr) {
             for (size_t i = 0; i < pe->size(); ++i) {
-                ros2plan_knowledge_msgs::ProbabilisticEffect e;
-                ros2plan_knowledge_msgs::ExprBase prob;
-                prob.expr_type = ros2plan_knowledge_msgs::ExprBase::CONSTANT;
+                ros2plan_knowledge_msgs::msg::ProbabilisticEffect e;
+                ros2plan_knowledge_msgs::msg::ExprBase prob;
+                prob.expr_type = ros2plan_knowledge_msgs::msg::ExprBase::CONSTANT;
                 prob.constant = pe->probability(i).double_value();
                 e.probability.tokens.push_back(prob);
                 fillEffects(pe->effect(i), domain, e.add_effects, e.del_effects, out_pr_eff, assign_eff, var_decl);
@@ -168,53 +167,53 @@ namespace KCL_ros2plan {
         NOT_IMPLEMENTED_OPERATOR;
     }
 
-    ros2plan_knowledge_msgs::DomainAssignment
+    ros2plan_knowledge_msgs::msg::DomainAssignment
     PPDDLUtils::getUpdate(const ppddl_parser::UpdateEffect *ue, PPDDLDomainPtr domain, std::map<ppddl_parser::Term, string> &var_decl) {
-        ros2plan_knowledge_msgs::DomainAssignment assignment;
+        ros2plan_knowledge_msgs::msg::DomainAssignment assignment;
         const ppddl_parser::Update* up = &ue->update();
         if (dynamic_cast<const ppddl_parser::Assign*>(up) != nullptr) {
-            assignment.assign_type = ros2plan_knowledge_msgs::DomainAssignment::ASSIGN;
+            assignment.assign_type = ros2plan_knowledge_msgs::msg::DomainAssignment::ASSIGN;
         }
         else if (dynamic_cast<const ppddl_parser::ScaleUp*>(up) != nullptr) {
-            assignment.assign_type = ros2plan_knowledge_msgs::DomainAssignment::SCALE_UP;
+            assignment.assign_type = ros2plan_knowledge_msgs::msg::DomainAssignment::SCALE_UP;
         }
         else if (dynamic_cast<const ppddl_parser::ScaleDown*>(up) != nullptr) {
-            assignment.assign_type = ros2plan_knowledge_msgs::DomainAssignment::SCALE_DOWN;
+            assignment.assign_type = ros2plan_knowledge_msgs::msg::DomainAssignment::SCALE_DOWN;
         }
         else if (dynamic_cast<const ppddl_parser::Increase*>(up) != nullptr) {
-            assignment.assign_type = ros2plan_knowledge_msgs::DomainAssignment::INCREASE;
+            assignment.assign_type = ros2plan_knowledge_msgs::msg::DomainAssignment::INCREASE;
         }
         else if (dynamic_cast<const ppddl_parser::Decrease*>(up) != nullptr) {
-            assignment.assign_type = ros2plan_knowledge_msgs::DomainAssignment::DECREASE;
+            assignment.assign_type = ros2plan_knowledge_msgs::msg::DomainAssignment::DECREASE;
         }
         assignment.lhs = getExpression(up->fluent(), domain, var_decl).tokens[0].function;
         assignment.rhs = getExpression(up->expression(), domain, var_decl);
         return assignment;
     }
 
-    ros2plan_knowledge_msgs::ExprComposite
+    ros2plan_knowledge_msgs::msg::ExprComposite
     PPDDLUtils::getExpression(const ppddl_parser::Expression &exp, PPDDLDomainPtr domain, std::map<ppddl_parser::Term, string> &var_decl) {
-        ros2plan_knowledge_msgs::ExprComposite ret;
-        ros2plan_knowledge_msgs::ExprBase base;
+        ros2plan_knowledge_msgs::msg::ExprComposite ret;
+        ros2plan_knowledge_msgs::msg::ExprBase base;
 
         auto v = dynamic_cast<const ppddl_parser::Value*>(&exp);
         if (v != nullptr) {
-            base.expr_type = ros2plan_knowledge_msgs::ExprBase::CONSTANT;
+            base.expr_type = ros2plan_knowledge_msgs::msg::ExprBase::CONSTANT;
             base.constant = v->value().double_value();
             ret.tokens.push_back(base);
         }
 
         auto f = dynamic_cast<const ppddl_parser::Fluent*>(&exp);
         if (f != nullptr) {
-            base.expr_type = ros2plan_knowledge_msgs::ExprBase::FUNCTION;
-            ros2plan_knowledge_msgs::DomainFormula df;
+            base.expr_type = ros2plan_knowledge_msgs::msg::ExprBase::FUNCTION;
+            ros2plan_knowledge_msgs::msg::DomainFormula df;
             df.name = domain->functions().name(f->function());
             if (df.name == "goal-achieved") return ret;
             ppddl_parser::TermList tl = f->terms();
             ppddl_parser::TypeList params = domain->functions().parameters(f->function());
             assert(tl.size() == params.size());
             for (size_t i = 0; i < tl.size(); ++i) {
-                diagnostic_msgs::KeyValue p;
+                diagnostic_msgs::msg::KeyValue p;
                 p.key = var_decl[tl[i]];
                 p.value = domain->types().typestring(params[i]); // type
                 df.typed_parameters.push_back(p);
@@ -227,31 +226,31 @@ namespace KCL_ros2plan {
         if (comp != nullptr) {
             auto add = dynamic_cast<const ppddl_parser::Addition *>(&exp);
             if (add != nullptr) {
-                base.expr_type = ros2plan_knowledge_msgs::ExprBase::OPERATOR;
-                base.op = ros2plan_knowledge_msgs::ExprBase::ADD;
+                base.expr_type = ros2plan_knowledge_msgs::msg::ExprBase::OPERATOR;
+                base.op = ros2plan_knowledge_msgs::msg::ExprBase::ADD;
             }
 
             auto sub = dynamic_cast<const ppddl_parser::Subtraction *>(&exp);
             if (sub != nullptr) {
-                base.expr_type = ros2plan_knowledge_msgs::ExprBase::OPERATOR;
-                base.op = ros2plan_knowledge_msgs::ExprBase::SUB;
+                base.expr_type = ros2plan_knowledge_msgs::msg::ExprBase::OPERATOR;
+                base.op = ros2plan_knowledge_msgs::msg::ExprBase::SUB;
             }
 
             auto mul = dynamic_cast<const ppddl_parser::Multiplication *>(&exp);
             if (mul != nullptr) {
-                base.expr_type = ros2plan_knowledge_msgs::ExprBase::OPERATOR;
-                base.op = ros2plan_knowledge_msgs::ExprBase::MUL;
+                base.expr_type = ros2plan_knowledge_msgs::msg::ExprBase::OPERATOR;
+                base.op = ros2plan_knowledge_msgs::msg::ExprBase::MUL;
             }
 
             auto div = dynamic_cast<const ppddl_parser::Division *>(&exp);
             if (div != nullptr) {
-                base.expr_type = ros2plan_knowledge_msgs::ExprBase::OPERATOR;
-                base.op = ros2plan_knowledge_msgs::ExprBase::DIV;
+                base.expr_type = ros2plan_knowledge_msgs::msg::ExprBase::OPERATOR;
+                base.op = ros2plan_knowledge_msgs::msg::ExprBase::DIV;
             }
 
             ret.tokens.push_back(base);
-            ros2plan_knowledge_msgs::ExprComposite op1 = getExpression(add->operand1(), domain, var_decl);
-            ros2plan_knowledge_msgs::ExprComposite op2 = getExpression(add->operand2(), domain, var_decl);
+            ros2plan_knowledge_msgs::msg::ExprComposite op1 = getExpression(add->operand1(), domain, var_decl);
+            ros2plan_knowledge_msgs::msg::ExprComposite op2 = getExpression(add->operand2(), domain, var_decl);
 
             join(ret.tokens, op1.tokens);
             join(ret.tokens, op2.tokens);
@@ -259,21 +258,21 @@ namespace KCL_ros2plan {
         return ret;
     }
 
-    void PPDDLUtils::join(std::vector<ros2plan_knowledge_msgs::ExprBase> &a,
-                                  std::vector<ros2plan_knowledge_msgs::ExprBase> &b) {
+    void PPDDLUtils::join(std::vector<ros2plan_knowledge_msgs::msg::ExprBase> &a,
+                                  std::vector<ros2plan_knowledge_msgs::msg::ExprBase> &b) {
             a.insert(a.end(), std::make_move_iterator(b.begin()), std::make_move_iterator(b.end()));
     }
 
 
-    ros2plan_knowledge_msgs::DomainFormula PPDDLUtils::getAtom(const ppddl_parser::Atom* a, PPDDLDomainPtr domain, std::map<ppddl_parser::Term, string> &var_decl, bool instantiate) {
-        ros2plan_knowledge_msgs::DomainFormula df;
+    ros2plan_knowledge_msgs::msg::DomainFormula PPDDLUtils::getAtom(const ppddl_parser::Atom* a, PPDDLDomainPtr domain, std::map<ppddl_parser::Term, string> &var_decl, bool instantiate) {
+        ros2plan_knowledge_msgs::msg::DomainFormula df;
         df.name = domain->predicates().name(a->predicate());
         ppddl_parser::TermList tl = a->terms();
         ppddl_parser::TypeList params = domain->predicates().parameters(a->predicate());
         assert(tl.size() == params.size());
         std::map<std::string, int> var_names;
         for (size_t i = 0; i < tl.size(); ++i) {
-            diagnostic_msgs::KeyValue p;
+            diagnostic_msgs::msg::KeyValue p;
             if (tl[i].object() or instantiate) {
                 p.value = var_decl[tl[i]];
                 std::string vname = domain->types().typestring(params[i]).substr(0, 1);
@@ -294,15 +293,15 @@ namespace KCL_ros2plan {
     }
 
     void
-    PPDDLUtils::fillGoal(const ppddl_parser::StateFormula &goal, PPDDLDomainPtr domain, PPDDLProblemPtr problem, std::vector<ros2plan_knowledge_msgs::KnowledgeItem>& out_goal,
+    PPDDLUtils::fillGoal(const ppddl_parser::StateFormula &goal, PPDDLDomainPtr domain, PPDDLProblemPtr problem, std::vector<ros2plan_knowledge_msgs::msg::KnowledgeItem>& out_goal,
                          std::map<ppddl_parser::Term, std::string> &var_decl, bool is_negative) {
 
         // check which type of condition we have
         auto a = dynamic_cast<const ppddl_parser::Atom*>(&goal);
         if (a != nullptr) {
-            ros2plan_knowledge_msgs::DomainFormula df = getAtom(a, domain, var_decl, true); // we have to instantiate the
-            ros2plan_knowledge_msgs::KnowledgeItem ki;
-            ki.knowledge_type = ros2plan_knowledge_msgs::KnowledgeItem::FACT;
+            ros2plan_knowledge_msgs::msg::DomainFormula df = getAtom(a, domain, var_decl, true); // we have to instantiate the
+            ros2plan_knowledge_msgs::msg::KnowledgeItem ki;
+            ki.knowledge_type = ros2plan_knowledge_msgs::msg::KnowledgeItem::FACT;
             ki.attribute_name = df.name;
             ki.values = df.typed_parameters;
             ki.is_negative = is_negative;
@@ -350,24 +349,24 @@ namespace KCL_ros2plan {
 
         auto cmplt = dynamic_cast<const ppddl_parser::LessThan*>(&goal);
         if (cmplt != nullptr){
-            ros2plan_knowledge_msgs::DomainInequality di;
-            di.comparison_type = ros2plan_knowledge_msgs::DomainInequality::LESS;
+            ros2plan_knowledge_msgs::msg::DomainInequality di;
+            di.comparison_type = ros2plan_knowledge_msgs::msg::DomainInequality::LESS;
             di.lhs = getExpression(cmplt->expr1(), domain, var_decl);
             di.rhs = getExpression(cmplt->expr2(), domain, var_decl);
-            ros2plan_knowledge_msgs::KnowledgeItem ki;
-            ki.knowledge_type = ros2plan_knowledge_msgs::KnowledgeItem::INEQUALITY;
+            ros2plan_knowledge_msgs::msg::KnowledgeItem ki;
+            ki.knowledge_type = ros2plan_knowledge_msgs::msg::KnowledgeItem::INEQUALITY;
             ki.ineq = di;
             out_goal.push_back(ki);
             return;
         }
         auto cmplte = dynamic_cast<const ppddl_parser::LessThanOrEqualTo*>(&goal);
         if (cmplte != nullptr){
-            ros2plan_knowledge_msgs::DomainInequality di;
-            di.comparison_type = ros2plan_knowledge_msgs::DomainInequality::LESSEQ;
+            ros2plan_knowledge_msgs::msg::DomainInequality di;
+            di.comparison_type = ros2plan_knowledge_msgs::msg::DomainInequality::LESSEQ;
             di.lhs = getExpression(cmplte->expr1(), domain, var_decl);
             di.rhs = getExpression(cmplte->expr2(), domain, var_decl);
-            ros2plan_knowledge_msgs::KnowledgeItem ki;
-            ki.knowledge_type = ros2plan_knowledge_msgs::KnowledgeItem::INEQUALITY;
+            ros2plan_knowledge_msgs::msg::KnowledgeItem ki;
+            ki.knowledge_type = ros2plan_knowledge_msgs::msg::KnowledgeItem::INEQUALITY;
             ki.ineq = di;
             out_goal.push_back(ki);
             return;
@@ -375,12 +374,12 @@ namespace KCL_ros2plan {
 
         auto cmpeq = dynamic_cast<const ppddl_parser::EqualTo*>(&goal);
         if (cmpeq != nullptr) {
-            ros2plan_knowledge_msgs::DomainInequality di;
-            di.comparison_type = ros2plan_knowledge_msgs::DomainInequality::EQUALS;
+            ros2plan_knowledge_msgs::msg::DomainInequality di;
+            di.comparison_type = ros2plan_knowledge_msgs::msg::DomainInequality::EQUALS;
             di.lhs = getExpression(cmpeq->expr1(), domain, var_decl);
             di.rhs = getExpression(cmpeq->expr2(), domain, var_decl);
-            ros2plan_knowledge_msgs::KnowledgeItem ki;
-            ki.knowledge_type = ros2plan_knowledge_msgs::KnowledgeItem::INEQUALITY;
+            ros2plan_knowledge_msgs::msg::KnowledgeItem ki;
+            ki.knowledge_type = ros2plan_knowledge_msgs::msg::KnowledgeItem::INEQUALITY;
             ki.ineq = di;
             out_goal.push_back(ki);
             return;
@@ -388,12 +387,12 @@ namespace KCL_ros2plan {
 
         auto cmpgte = dynamic_cast<const ppddl_parser::GreaterThanOrEqualTo*>(&goal);
         if (cmpgte != nullptr) {
-            ros2plan_knowledge_msgs::DomainInequality di;
-            di.comparison_type = ros2plan_knowledge_msgs::DomainInequality::GREATEREQ;
+            ros2plan_knowledge_msgs::msg::DomainInequality di;
+            di.comparison_type = ros2plan_knowledge_msgs::msg::DomainInequality::GREATEREQ;
             di.lhs = getExpression(cmpgte->expr1(), domain, var_decl);
             di.rhs = getExpression(cmpgte->expr2(), domain, var_decl);
-            ros2plan_knowledge_msgs::KnowledgeItem ki;
-            ki.knowledge_type = ros2plan_knowledge_msgs::KnowledgeItem::INEQUALITY;
+            ros2plan_knowledge_msgs::msg::KnowledgeItem ki;
+            ki.knowledge_type = ros2plan_knowledge_msgs::msg::KnowledgeItem::INEQUALITY;
             ki.ineq = di;
             out_goal.push_back(ki);
             return;
@@ -401,12 +400,12 @@ namespace KCL_ros2plan {
 
         auto cmpgt = dynamic_cast<const ppddl_parser::GreaterThan*>(&goal);
         if (cmpgt != nullptr) {
-            ros2plan_knowledge_msgs::DomainInequality di;
-            di.comparison_type = ros2plan_knowledge_msgs::DomainInequality::GREATER;
+            ros2plan_knowledge_msgs::msg::DomainInequality di;
+            di.comparison_type = ros2plan_knowledge_msgs::msg::DomainInequality::GREATER;
             di.lhs = getExpression(cmpgt->expr1(), domain, var_decl);
             di.rhs = getExpression(cmpgt->expr2(), domain, var_decl);
-            ros2plan_knowledge_msgs::KnowledgeItem ki;
-            ki.knowledge_type = ros2plan_knowledge_msgs::KnowledgeItem::INEQUALITY;
+            ros2plan_knowledge_msgs::msg::KnowledgeItem ki;
+            ki.knowledge_type = ros2plan_knowledge_msgs::msg::KnowledgeItem::INEQUALITY;
             ki.ineq = di;
             out_goal.push_back(ki);
             return;
@@ -416,7 +415,7 @@ namespace KCL_ros2plan {
     }
 
     void PPDDLUtils::fillForallGoal(const ppddl_parser::Forall *fa, PPDDLDomainPtr domain, PPDDLProblemPtr problem,
-                                    size_t paramid, std::vector<ros2plan_knowledge_msgs::KnowledgeItem> &out_goal,
+                                    size_t paramid, std::vector<ros2plan_knowledge_msgs::msg::KnowledgeItem> &out_goal,
                                     std::map<ppddl_parser::Term, std::string>& var_decl, bool is_negative) {
         // Instantiate all the objects.
         if (paramid == fa->parameters().size()) fillGoal(fa->body(), domain, problem, out_goal, var_decl, is_negative);

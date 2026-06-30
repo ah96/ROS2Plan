@@ -8,8 +8,8 @@ namespace KCL_ros2plan {
     PPDDLDomainPtr PPDDLParser::parseDomainProblem(const std::string &domainPath, const std::string &problemPath) {
         // only parse domain once
         if (domain_parsed) return domain;
-        ROS_INFO("KCL: (%s) Parsing domain: %s.", ros::this_node::getName().c_str(), domainPath.c_str());
-        ROS_INFO("KCL: (%s) Parsing initial state", ros::this_node::getName().c_str());
+        RCLCPP_INFO(rclcpp::get_logger("PPDDLParser"), "KCL: Parsing domain: %s.", domainPath.c_str());
+        RCLCPP_INFO(rclcpp::get_logger("PPDDLParser"), "KCL: Parsing initial state");
 
         // parse domain
         try {
@@ -21,11 +21,11 @@ namespace KCL_ros2plan {
             std::string filetype = "domain";
             std::string err(e.what());
             if (err.find("Problem") != std::string::npos or err.find("problem") != std::string::npos) filetype = "problem";
-            ROS_ERROR("KCL: (%s) Failed to open %s file.", ros::this_node::getName().c_str(), filetype.c_str());
+            RCLCPP_ERROR(rclcpp::get_logger("PPDDLParser"), "KCL: Failed to open %s file.", filetype.c_str());
             return nullptr;
         }
         if (not domain) {
-            ROS_ERROR("KCL: (%s) Failed to open domain file.", ros::this_node::getName().c_str());
+            RCLCPP_ERROR(rclcpp::get_logger("PPDDLParser"), "KCL: Failed to open domain file.");
             return nullptr;
         }
 

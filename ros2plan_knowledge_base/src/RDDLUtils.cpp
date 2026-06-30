@@ -6,11 +6,10 @@
 #include <ros2plan_knowledge_base/RDDLExprUtils.h>
 
 #include "ros2plan_knowledge_base/RDDLUtils.h"
-#include "ros/ros.h"
 
 namespace KCL_ros2plan {
 
-    PosNegDomainFormula RDDLUtils::getOperatorPreconditions(const ros2plan_knowledge_msgs::DomainFormula &op_head,
+    PosNegDomainFormula RDDLUtils::getOperatorPreconditions(const ros2plan_knowledge_msgs::msg::DomainFormula &op_head,
                                                                     const std::vector<LogicalExpression *> &SACs) {
         PosNegDomainFormula ret;
 
@@ -22,7 +21,7 @@ namespace KCL_ros2plan {
         return ret;
     }
 
-    PosNegDomainFormula RDDLUtils::getOperatorPrecondition(const ros2plan_knowledge_msgs::DomainFormula &op_head, const LogicalExpression *SAC) {
+    PosNegDomainFormula RDDLUtils::getOperatorPrecondition(const ros2plan_knowledge_msgs::msg::DomainFormula &op_head, const LogicalExpression *SAC) {
         auto exp_con = dynamic_cast<const Connective *>(SAC);
         if (exp_con != nullptr) return getOperatorPrecondition(op_head, exp_con);
 
@@ -62,10 +61,10 @@ namespace KCL_ros2plan {
 
         auto exp_var = dynamic_cast<const ParametrizedVariable *>(expr);
         if (exp_var != nullptr){
-            ros2plan_knowledge_msgs::DomainFormula f;
+            ros2plan_knowledge_msgs::msg::DomainFormula f;
             f.name = exp_var->variableName;
             for (auto pit = exp_var->params.begin(); pit != exp_var->params.end(); ++pit) {
-                diagnostic_msgs::KeyValue param;
+                diagnostic_msgs::msg::KeyValue param;
 
                 auto param_name = assign.find((*pit)->name);
                 if (param_name != assign.end()) param.key = param_name->second; // Parameter name (i.e. ?r)
@@ -146,7 +145,7 @@ namespace KCL_ros2plan {
         }
     }
 
-    PosNegDomainFormula RDDLUtils::getOperatorPrecondition(const ros2plan_knowledge_msgs::DomainFormula &op_head, const Connective *SAC) {
+    PosNegDomainFormula RDDLUtils::getOperatorPrecondition(const ros2plan_knowledge_msgs::msg::DomainFormula &op_head, const Connective *SAC) {
         assert(SAC->exprs.size() == 2);
         auto disj = dynamic_cast<const Disjunction *>(SAC);
         if (disj != nullptr) {
@@ -168,14 +167,14 @@ namespace KCL_ros2plan {
     }
 
 
-    PosNegDomainFormula RDDLUtils::getOperatorPrecondition(const ros2plan_knowledge_msgs::DomainFormula &op_head, const Negation *SAC) {
+    PosNegDomainFormula RDDLUtils::getOperatorPrecondition(const ros2plan_knowledge_msgs::msg::DomainFormula &op_head, const Negation *SAC) {
         // Swap the resulting precondition
         PosNegDomainFormula neg = getOperatorPrecondition(op_head, SAC->expr);
         negate(neg);
         return neg;
     }
 
-    EffectDomainFormula RDDLUtils::getOperatorEffects(const ros2plan_knowledge_msgs::DomainFormula &op_head,
+    EffectDomainFormula RDDLUtils::getOperatorEffects(const ros2plan_knowledge_msgs::msg::DomainFormula &op_head,
                                                               const std::map<ParametrizedVariable *, LogicalExpression *> &CPFs) {
         EffectDomainFormula eff_ret;
         for (auto it = CPFs.begin(); it != CPFs.end(); ++it) {
@@ -200,7 +199,7 @@ namespace KCL_ros2plan {
         return eff_ret;
     }
 
-    vectorDA RDDLUtils::getOperatorAssignEffects(const ros2plan_knowledge_msgs::DomainFormula &op_head,
+    vectorDA RDDLUtils::getOperatorAssignEffects(const ros2plan_knowledge_msgs::msg::DomainFormula &op_head,
                                                          const std::map<ParametrizedVariable *, LogicalExpression *> &CPFs) {
         vectorDA ret;
         for (auto it = CPFs.begin(); it != CPFs.end(); ++it) {
@@ -216,7 +215,7 @@ namespace KCL_ros2plan {
 
 
     EffectDomainFormula
-    RDDLUtils::getOperatorEffects(const ros2plan_knowledge_msgs::DomainFormula &op_head, const ParametrizedVariable *pVariable, const LogicalExpression *exp, std::map<std::string, std::string>& assign, bool& action_found, bool& exogenous) {
+    RDDLUtils::getOperatorEffects(const ros2plan_knowledge_msgs::msg::DomainFormula &op_head, const ParametrizedVariable *pVariable, const LogicalExpression *exp, std::map<std::string, std::string>& assign, bool& action_found, bool& exogenous) {
         auto ifte = dynamic_cast<const IfThenElseExpression*>(exp);
         if (ifte != nullptr) return getOperatorEffects(op_head, pVariable, ifte, assign, action_found, exogenous);
 
@@ -297,7 +296,7 @@ namespace KCL_ros2plan {
     }
 
     EffectDomainFormula
-    RDDLUtils::getOperatorEffects(const ros2plan_knowledge_msgs::DomainFormula &op_head, const ParametrizedVariable *pVariable, const IfThenElseExpression *exp, std::map<std::string, std::string>& assign, bool& action_found, bool& exogenous) {
+    RDDLUtils::getOperatorEffects(const ros2plan_knowledge_msgs::msg::DomainFormula &op_head, const ParametrizedVariable *pVariable, const IfThenElseExpression *exp, std::map<std::string, std::string>& assign, bool& action_found, bool& exogenous) {
         // Idea: - If condition is 1 -> add the predicate if then is 1, add ~predicate if then is 0, or join with the result
         //       - else -> add ~predicate if the condition is 1 (so if condition having the action fluent is false, then predicate is true means a negative effect)
 
@@ -350,7 +349,7 @@ namespace KCL_ros2plan {
         return ret;
     }
 
-    vectorDA RDDLUtils::getOperatorAssignEffects(const ros2plan_knowledge_msgs::DomainFormula &op_head,
+    vectorDA RDDLUtils::getOperatorAssignEffects(const ros2plan_knowledge_msgs::msg::DomainFormula &op_head,
                                                          const ParametrizedVariable *pVariable,
                                                          const IfThenElseExpression *exp) {
         // Assumption: an assignment for an operator effect is of the form:
@@ -366,8 +365,8 @@ namespace KCL_ros2plan {
                 PosNegDomainFormula iftrue = toDomainFormula(pVariable, assign);
                 // iftrue will be the formula of the left hand side
 
-                ros2plan_knowledge_msgs::ExprComposite rhs;
-                ros2plan_knowledge_msgs::DomainAssignment::_assign_type_type assignment_type;
+                ros2plan_knowledge_msgs::msg::ExprComposite rhs;
+                uint8_t assignment_type;
 
                 auto numconst = dynamic_cast<const NumericConstant*>(exp->valueIfTrue);
                 if (numconst == nullptr) {
@@ -375,8 +374,8 @@ namespace KCL_ros2plan {
                     auto subtr = dynamic_cast<const Subtraction *>(exp->valueIfTrue);
                     if (addition == nullptr and subtr == nullptr and numconst == nullptr) return ret; // Ignoring it!
 
-                    if (addition != nullptr) assignment_type = ros2plan_knowledge_msgs::DomainAssignment::INCREASE;
-                    else assignment_type = ros2plan_knowledge_msgs::DomainAssignment::DECREASE;
+                    if (addition != nullptr) assignment_type = ros2plan_knowledge_msgs::msg::DomainAssignment::INCREASE;
+                    else assignment_type = ros2plan_knowledge_msgs::msg::DomainAssignment::DECREASE;
 
                     auto connective = dynamic_cast<const Connective *>(exp->valueIfTrue);
 
@@ -390,11 +389,11 @@ namespace KCL_ros2plan {
                 }
                 else {
                     rhs = RDDLExprUtils::getExpression(numconst, assign);
-                    assignment_type = ros2plan_knowledge_msgs::DomainAssignment::ASSIGN_CTS;
+                    assignment_type = ros2plan_knowledge_msgs::msg::DomainAssignment::ASSIGN_CTS;
                 }
 
                 for (auto it = iftrue.pos.begin(); it != iftrue.pos.end(); ++it) {
-                    ros2plan_knowledge_msgs::DomainAssignment da;
+                    ros2plan_knowledge_msgs::msg::DomainAssignment da;
                     da.assign_type = assignment_type;
                     da.grounded = false;
                     da.lhs = *it;
@@ -407,7 +406,7 @@ namespace KCL_ros2plan {
     }
 
     std::map<std::string, std::string>
-    RDDLUtils::getParamReplacement(const ros2plan_knowledge_msgs::DomainFormula &op_head,
+    RDDLUtils::getParamReplacement(const ros2plan_knowledge_msgs::msg::DomainFormula &op_head,
                                            const ParametrizedVariable *op_var) {
         assert(op_head.name == op_var->variableName and op_head.typed_parameters.size() == op_var->params.size());
         std::map<std::string, std::string> assign;
@@ -424,7 +423,7 @@ namespace KCL_ros2plan {
     RDDLUtils::getOperatorEffects(const ParametrizedVariable *pVariable, const BernoulliDistribution *exp,
                                           const std::map<std::string, std::string> &assign, bool& action_found, bool& exogenous) {
         EffectDomainFormula ret;
-        ros2plan_knowledge_msgs::ProbabilisticEffect eff;
+        ros2plan_knowledge_msgs::msg::ProbabilisticEffect eff;
         eff.probability = RDDLExprUtils::getExpression(exp->expr, assign);
         PosNegDomainFormula df = toDomainFormula(pVariable, assign);
         eff.add_effects = df.pos;
@@ -439,11 +438,11 @@ namespace KCL_ros2plan {
         // A discrete effect will be N probabilistic effects consisting of an assignment to the variable
         EffectDomainFormula ret;
         // Get Variable representation
-        ros2plan_knowledge_msgs::DomainFormula df = toDomainFormula(pVariable, assign).pos[0];
+        ros2plan_knowledge_msgs::msg::DomainFormula df = toDomainFormula(pVariable, assign).pos[0];
         for (size_t i = 0; i < exp->values.size(); ++i) {
-            ros2plan_knowledge_msgs::ProbabilisticEffect eff;
-            ros2plan_knowledge_msgs::DomainAssignment domain_assign;
-            domain_assign.assign_type = ros2plan_knowledge_msgs::DomainAssignment::ASSIGN;
+            ros2plan_knowledge_msgs::msg::ProbabilisticEffect eff;
+            ros2plan_knowledge_msgs::msg::DomainAssignment domain_assign;
+            domain_assign.assign_type = ros2plan_knowledge_msgs::msg::DomainAssignment::ASSIGN;
             domain_assign.lhs = df;
             domain_assign.rhs = RDDLExprUtils::getExpression(exp->values[i], assign);
             eff.assign_effects.push_back(domain_assign);
@@ -454,7 +453,7 @@ namespace KCL_ros2plan {
     }
 
     void
-    RDDLUtils::fillForAllEffect(const ros2plan_knowledge_msgs::DomainFormula &op_head, const ParametrizedVariable *pVariable, const UniversalQuantification *exp, EffectDomainFormula& out, size_t paramid,
+    RDDLUtils::fillForAllEffect(const ros2plan_knowledge_msgs::msg::DomainFormula &op_head, const ParametrizedVariable *pVariable, const UniversalQuantification *exp, EffectDomainFormula& out, size_t paramid,
                                         std::map<std::string, std::string> &assign, bool& action_found, bool& exogenous) {
         // Instantiate all the objects.
         if (paramid == exp->paramList->params.size()) {
@@ -471,9 +470,9 @@ namespace KCL_ros2plan {
         }
     }
 
-    std::vector<ros2plan_knowledge_msgs::KnowledgeItem> RDDLUtils::getGoals(const std::map<ParametrizedVariable*, LogicalExpression*>& CPFs,
+    std::vector<ros2plan_knowledge_msgs::msg::KnowledgeItem> RDDLUtils::getGoals(const std::map<ParametrizedVariable*, LogicalExpression*>& CPFs,
                                                                            const std::vector<LogicalExpression *> &SACs) {
-        std::vector<ros2plan_knowledge_msgs::KnowledgeItem> ret;
+        std::vector<ros2plan_knowledge_msgs::msg::KnowledgeItem> ret;
         for (auto it = CPFs.begin(); it != CPFs.end(); ++it) {
             if (it->first->variableName == "goal") {
                 std::map<std::string, std::string> ass;
@@ -494,7 +493,7 @@ namespace KCL_ros2plan {
     }
 
     vectorKI RDDLUtils::getGoals(const LogicalExpression *exp, bool is_negative, std::map<std::string, std::string> &assign) {
-        std::vector<ros2plan_knowledge_msgs::KnowledgeItem> ret;
+        std::vector<ros2plan_knowledge_msgs::msg::KnowledgeItem> ret;
         auto conj = dynamic_cast<const Conjunction*>(exp);
         if (conj != nullptr) {
             for (auto it = conj->exprs.begin(); it != conj->exprs.end(); ++it) {
@@ -525,12 +524,12 @@ namespace KCL_ros2plan {
 
         auto exp_var = dynamic_cast<const ParametrizedVariable*>(exp);
         if (exp_var != nullptr) {
-            ros2plan_knowledge_msgs::KnowledgeItem ki;
-            ki.knowledge_type = ros2plan_knowledge_msgs::KnowledgeItem::FACT;
+            ros2plan_knowledge_msgs::msg::KnowledgeItem ki;
+            ki.knowledge_type = ros2plan_knowledge_msgs::msg::KnowledgeItem::FACT;
             ki.attribute_name = exp_var->variableName;
             ki.is_negative = is_negative;
             for (auto pit = exp_var->params.begin(); pit != exp_var->params.end(); ++pit) {
-                diagnostic_msgs::KeyValue param;
+                diagnostic_msgs::msg::KeyValue param;
 
                 auto param_name = assign.find((*pit)->name);
                 if (param_name != assign.end()) param.key = param_name->second; // Parameter name (i.e. ?r)

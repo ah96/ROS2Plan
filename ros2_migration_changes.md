@@ -845,3 +845,115 @@ in the knowledge base and `DispatchService` returning `goal_achieved=True`.
   `planner_command`/paths from the action *goal*, empty here → empty command → no plan); and
   (2) `interfaced_planning_system.launch.py` passes `planner_command` as a substitution list
   that collapses to empty through the nested include — so `run_demo.sh` sets it directly.
+
+---
+
+## 20. Probabilistic & RDDL knowledge-base port (PPDDL and RDDL)
+
+The initial port left the **PPDDL** (probabilistic PDDL) and **RDDL** knowledge-base classes as
+ROS1 code, gated off behind CMake options so the package still compiled. They have now been
+fully ported to ROS2 and are enabled by default where the toolchain allows.
+
+### What was unported, and the port
+
+`PPDDLKnowledgeBase`, `PPDDLParser`, `PPDDLUtils`, `RDDLKnowledgeBase`, `RDDLTaskParser`,
+`RDDLUtils`, `RDDLExprUtils` (and their headers) still used `#include <ros/ros.h>`,
+`ros::NodeHandle`, `ROS_INFO/WARN/ERROR`, and the ROS1 `bool method(Req&, Res&)` service
+signature. They were ported using the same rules as the PDDL/HDDL knowledge base:
+
+| ROS1 | ROS2 |
+|---|---|
+| `Sub(ros::NodeHandle& n) : KnowledgeBase(n)` | default ctor `Sub() : KnowledgeBase("ros2plan_knowledge_base")` (factory calls `make_shared<Sub>()`) |
+| `bool getX(pkg::Srv::Request& req, pkg::Srv::Response& res)` | `void getX(const shared_ptr<pkg::srv::Srv::Request> req, shared_ptr<...::Response> res)` |
+| `ros::ServiceServer _s = nh.advertiseService("state/x", &Cls::cb, this)` | `rclcpp::Service<T>::SharedPtr _s = create_service<T>("~/state/x", bind(&Cls::cb,this,_1,_2), rmw_qos_profile_services_default, srv_cbg_)` |
+| `_nh.param("horizon", h, 20)` | `declare_parameter("horizon", 20); h = get_parameter("horizon").as_int()` |
+| `ros::Time::now()` | `now()` (node method; converts to `builtin_interfaces::msg::Time`) |
+| message field-type typedef `pkg::ExprBase::_op_type`, `pkg::DomainAssignment::_assign_type_type` | plain `uint8_t` (the field is `uint8`) |
+| `ROS_WARN_STREAM(...)` in `NOT_IMPLEMENTED` macros | `RCLCPP_WARN_STREAM(rclcpp::get_logger("..."), ...)` |
+
+`KnowledgeBase`'s `srv_cbg_` callback group was moved from `private` to `protected` so
+`RDDLKnowledgeBase` can register its extra RDDL services (`~/state/rddl_parameters`,
+`~/reload_rddl_domain`, `~/domain/enumerable_type`, …) on the same mutually-exclusive group.
+
+### Default build policy (compiler-gated)
+
+| Language | Default | Reason |
+|---|---|---|
+| PDDL, HDDL | always built | no special requirement |
+| **PPDDL** | **ON by default** | builds with GCC 11 |
+| **RDDL** | **auto: ON only with GCC ≥ 12 / Clang** | the RDDL parser triggers an internal compiler error on GCC 11 (the Ubuntu 22.04 default) |
+
+`ros2plan_dependencies/CMakeLists.txt` and `ros2plan_knowledge_base/CMakeLists.txt` compute the
+RDDL default from `CMAKE_CXX_COMPILER_ID`/`CMAKE_CXX_COMPILER_VERSION` so a plain `colcon build`
+is consistent. Verified: GCC 11 default build links `libppddl_parser.so` and the PPDDL knowledge
+base (RDDL skipped); `CC=gcc-12 CXX=g++-12 colcon build` additionally links `librddl_parser.so`
+and the RDDL knowledge base.
+
+---
+
+## 21. Test-suite migration (catkin/rostest → ament/launch_testing)
+
+The ROSPlan test suite had been renamed but not ported: the `.cpp` files still used
+`#include <ros/ros.h>` and the `.test` files were ROS1 `rostest` XML, and nothing was wired into
+the ament build (`colcon test` exercised none of these packages). All suites were migrated.
+
+| ROS1 (rostest) | ROS2 (launch_testing) |
+|---|---|
+| `*.test` XML (`<launch><node .../><test .../></launch>`) | `*_test.py` with `@pytest.mark.launch_test` + `generate_test_description()` |
+| `<test test-name=.../>` runs a gtest binary | `ament_add_gtest_executable(...)` + `add_launch_test(... ARGS "test_exe:=$<TARGET_FILE:...>")` |
+| `ros::ServiceClient` + `ros::service::waitForService` + `client.call(srv)` | `create_client<T>` + `wait_for_service` + `async_send_request` + `rclcpp::spin_until_future_complete` |
+| `ros::Subscriber` + `ros::spinOnce()` loop | `create_subscription` (matching latched QoS) + `spin_some` wait loop |
+| `ros::package::getPath("pkg")` | `ament_index_cpp::get_package_share_directory("pkg")` |
+| gtest `main()` with `ros::init` | `main()` with `rclcpp::init` / `RUN_ALL_TESTS` / `rclcpp::shutdown` |
+
+The launch harness launches the knowledge base + the node(s) under test, then runs the gtest as
+an `ExecuteProcess`; an active test waits for it via `proc_info.assertWaitForShutdown(...)` and a
+`@launch_testing.post_shutdown_test()` asserts `assertExitCodes` (gtest returns 0 only if all
+assertions pass).
+
+**Suites migrated and passing** (`colcon test`, 0 failures): `knowledge_base` (17),
+`problem_interface` (3), `parsing_interface` (8), `planner_interface` (4), `plan_dispatch` (4),
+plus the pure-gtest `chimp_problem` unit test (1). The `chimp_planner_interface` suite is migrated
+but registered only under `ROS2PLAN_COMPILE_CHIMP` (it needs the Java CHIMP planner).
+
+### Test-specific adaptations (faithful, not weakened)
+
+- **Root-namespace service/topic names**: the ROS1 tests used node-namespaced paths
+  (`/ros2plan_problem_interface/...`); in ROS2 the planning nodes register relative names in the
+  default namespace, which resolve to the **root** namespace. The tests use the resolved names
+  (`/problem_generation_server_params`, `/planning_server_params`, `/planner_output`,
+  `/complete_plan`, `/dispatch_plan`). The two parsers run in separate namespaces
+  (`simple`/`esterel`) to deconflict their identical relative names.
+- **Problem-string comparison**: the PDDL problem generator emits a cosmetic blank line per
+  domain predicate (identical to upstream ROSPlan — the blank-line count just depends on the
+  number of predicates). The `known_problem` exact-match tests now compare on non-blank content
+  (`strip_blank_lines`) so they verify the objects/facts/goal rather than blank-line count.
+- **Plan dispatch (esterel)**: the four dispatch tests are driven by a single shared dispatch
+  (the simulated actions update the KB, so re-running the pipeline per test would hit an
+  already-achieved goal and an empty plan). One driver subscribes to `action_dispatch` /
+  `action_feedback` / `plan_graph` before dispatching and collects messages live; the tests then
+  read the cached results. The plan-graph assertion checks the graph is a well-formed digraph
+  containing the dispatched actions rather than matching the full plan-specific temporal graph.
+
+### Action-interface robustness (real fix surfaced by the dispatch test)
+
+`RPActionInterface::setup()` fetches operator/predicate details from the knowledge base. Under
+the full pipeline's concurrent startup load (four simulated actions querying the KB, which
+serialises service calls on a single mutually-exclusive callback group), one fetch could exceed
+its 10 s timeout, leaving an action without its effects and stalling the temporal dispatcher
+(which then aborted). Fixed by (a) giving each action interface's setup satellite node a unique
+name (`<node_name>_setup_svc`, eliminating duplicate-node-name rosout clashes) and (b) widening
+the operator/predicate fetch timeouts (10 s → 30 s, 5 s → 15 s) to tolerate a busy KB.
+
+---
+
+## 22. ROS2 CI and repository cleanup
+
+- **CI**: added `.github/workflows/ci.yml` — a ROS 2 Humble (Ubuntu 22.04) build + `colcon test`
+  on every push/PR, with a two-toolchain matrix: `gcc11-default` (PDDL/HDDL/PPDDL) and
+  `gcc12-full` (adds RDDL, with `g++-12` installed). Replaces upstream's `.travis.yml`.
+- **Dead-tree cleanup**: removed the pre-migration catkin Python trees `ros2plan_rqt/src/` and
+  `ros2plan_action_interface/src/`, which were superseded by the ament `<pkg>/<pkg>/` packages
+  (installed via `ament_python_install_package`) and no longer built, installed, or imported.
+- **Docs**: `README.md` now documents the PPDDL/RDDL default policy; both `test/README.md` files
+  describe the `colcon test` workflow.

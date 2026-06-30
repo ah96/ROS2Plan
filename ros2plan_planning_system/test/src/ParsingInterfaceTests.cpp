@@ -5,101 +5,132 @@
  * Author: Martin Koling (martinh.koling@kcl.ac.uk)
  * Author: Oscar Lima (oscar.lima@dfki.de)
  *
- * Unit tests for ROS2Plan parsing interface
+ * Unit tests for ROS2Plan parsing interface (ROS2 port)
  */
 
-#include <ros/ros.h>
-#include <ros/package.h>
-#include <std_srvs/Empty.h>
+#include <chrono>
+#include <memory>
+#include <string>
+#include <vector>
+
 #include <gtest/gtest.h>
+#include <rclcpp/rclcpp.hpp>
+#include <ament_index_cpp/get_package_share_directory.hpp>
 
-#include "ros2plan_dispatch_msgs/ParsingService.h"
-#include "ros2plan_dispatch_msgs/CompletePlan.h"
-#include "ros2plan_dispatch_msgs/EsterelPlan.h"
-#include "ros2plan_dispatch_msgs/ActionDispatch.h"
+#include "std_srvs/srv/empty.hpp"
+#include "ros2plan_dispatch_msgs/srv/parsing_service.hpp"
+#include "ros2plan_dispatch_msgs/msg/complete_plan.hpp"
+#include "ros2plan_dispatch_msgs/msg/esterel_plan.hpp"
+#include "ros2plan_dispatch_msgs/msg/action_dispatch.hpp"
 
-bool plan_messages_received;
-std::vector<ros2plan_dispatch_msgs::ActionDispatch> simple_plan_messages;
+using namespace std::chrono_literals;
 
-void testCallback(const ros2plan_dispatch_msgs::CompletePlan completePlan) {
+using Empty = std_srvs::srv::Empty;
+using ParsingService = ros2plan_dispatch_msgs::srv::ParsingService;
+using CompletePlan = ros2plan_dispatch_msgs::msg::CompletePlan;
+using EsterelPlan = ros2plan_dispatch_msgs::msg::EsterelPlan;
+using ActionDispatch = ros2plan_dispatch_msgs::msg::ActionDispatch;
 
-    for (auto rit=completePlan.plan.begin(); rit!=completePlan.plan.end(); rit++) {
-        simple_plan_messages.push_back(*rit);
-    }
+// In ROS2 each parser node advertises its services/topics with relative names. The launch harness
+// places the simple parser in the "/simple" namespace and the esterel parser in the "/esterel"
+// namespace, so the relative "parse_plan", "parse_plan_from_file" and "complete_plan" names resolve
+// under those namespaces (rather than colliding in the root namespace as they would by default).
+static const char * kSimpleParsePlanSrv = "/simple/parse_plan";
+static const char * kSimpleParseFromFileSrv = "/simple/parse_plan_from_file";
+static const char * kSimplePlanTopic = "/simple/complete_plan";
 
-    plan_messages_received = true;
+static const char * kEsterelParseFromFileSrv = "/esterel/parse_plan_from_file";
+static const char * kEsterelPlanTopic = "/esterel/complete_plan";
+
+// Shared parsing results, populated by the topic-collecting tests and read by the follow-up tests.
+static std::vector<ActionDispatch> simple_plan_messages;
+static EsterelPlan retrieved_esterel_plan;
+
+static std::string test_plan_path()
+{
+    return ament_index_cpp::get_package_share_directory("ros2plan_planning_system") +
+           "/test/pddl/amazon/test_plan.pddl";
 }
 
-bool esterel_plan_messages_received;
-ros2plan_dispatch_msgs::EsterelPlan retrieved_esterelPlan;
+// Calls a parse_plan_from_file service synchronously and returns whether the plan was parsed.
+static bool call_parse_from_file(const std::string & srv_name, bool & plan_parsed)
+{
+    auto node = rclcpp::Node::make_shared("parsing_interface_test_client");
+    auto client = node->create_client<ParsingService>(srv_name);
+    if (!client->wait_for_service(10s)) {
+        return false;
+    }
+    auto req = std::make_shared<ParsingService::Request>();
+    req->plan_path = test_plan_path();
 
-void esterelTestCallback(const ros2plan_dispatch_msgs::EsterelPlan esterelPlan) {
-
-    retrieved_esterelPlan = esterelPlan;
-    esterel_plan_messages_received = true;
+    auto future = client->async_send_request(req);
+    if (rclcpp::spin_until_future_complete(node, future, 10s) !=
+        rclcpp::FutureReturnCode::SUCCESS)
+    {
+        return false;
+    }
+    plan_parsed = future.get()->plan_parsed;
+    return true;
 }
 
 GTEST_TEST(ParsingInterfaceTests, Test1_parse_plan) {
+    auto node = rclcpp::Node::make_shared("parsing_interface_test_parse_plan");
+    auto client = node->create_client<Empty>(kSimpleParsePlanSrv);
+    ASSERT_TRUE(client->wait_for_service(10s));
 
-    ros::NodeHandle nh("~");
-
-    std::string srv_name = "/ros2plan_parsing_interface/parse_plan";
-    ros::ServiceClient client1 = nh.serviceClient<std_srvs::Empty>(srv_name);
-    std_srvs::Empty srv;
-
-    ros::service::waitForService(srv_name, ros::Duration(1));
-    ASSERT_EQ(1, client1.call(srv));
+    auto req = std::make_shared<Empty::Request>();
+    auto future = client->async_send_request(req);
+    ASSERT_EQ(rclcpp::spin_until_future_complete(node, future, 10s),
+              rclcpp::FutureReturnCode::SUCCESS);
 }
 
 GTEST_TEST(ParsingInterfaceTests, Test2_parse_plan_from_file) {
-
-    ros::NodeHandle nh("~");
-
-    std::string srv_name = "/ros2plan_parsing_interface/parse_plan_from_file";
-    ros::ServiceClient client1 = nh.serviceClient<ros2plan_dispatch_msgs::ParsingService>(srv_name);
-    ros2plan_dispatch_msgs::ParsingService srv;
-
-    std::string ros2plan_planning_system_path = ros::package::getPath("ros2plan_planning_system");
-
-    srv.request.plan_path = ros2plan_planning_system_path + "/test/pddl/amaron/test_plan.pddl";
-
-    ros::service::waitForService(srv_name, ros::Duration(1));
-    client1.call(srv);
-
-    ASSERT_EQ(1, srv.response.plan_parsed);
+    bool plan_parsed = false;
+    ASSERT_TRUE(call_parse_from_file(kSimpleParseFromFileSrv, plan_parsed));
+    ASSERT_TRUE(plan_parsed);
 }
 
 GTEST_TEST(ParsingInterfaceTests, Test3_simple_plan_messages_published_on_plan_topic) {
+    auto node = rclcpp::Node::make_shared("parsing_interface_test_simple_sub");
 
-    ros::NodeHandle nh("~");
+    bool plan_received = false;
+    // The simple parser publishes on a latched (transient_local) topic, so the subscriber must also
+    // be transient_local to receive the last published plan.
+    auto sub = node->create_subscription<CompletePlan>(
+        kSimplePlanTopic, rclcpp::QoS(1).transient_local(),
+        [&](CompletePlan::SharedPtr msg) {
+            simple_plan_messages.clear();
+            for (const auto & action : msg->plan) {
+                simple_plan_messages.push_back(action);
+            }
+            plan_received = true;
+        });
 
-    ros::Subscriber sub = nh.subscribe<ros2plan_dispatch_msgs::CompletePlan>
-                                ("/ros2plan_parsing_interface/complete_plan", 1000, &testCallback);
+    // Trigger parsing from file (which publishes the parsed plan on the topic).
+    auto client = node->create_client<ParsingService>(kSimpleParseFromFileSrv);
+    ASSERT_TRUE(client->wait_for_service(10s));
+    auto req = std::make_shared<ParsingService::Request>();
+    req->plan_path = test_plan_path();
+    auto future = client->async_send_request(req);
+    ASSERT_EQ(rclcpp::spin_until_future_complete(node, future, 10s),
+              rclcpp::FutureReturnCode::SUCCESS);
+    EXPECT_TRUE(future.get()->plan_parsed);
 
-    std::string srv_name = "/ros2plan_parsing_interface/parse_plan_from_file";
-    ros::ServiceClient client1 = nh.serviceClient<ros2plan_dispatch_msgs::ParsingService>(srv_name);
-    ros2plan_dispatch_msgs::ParsingService srv;
-
-    std::string ros2plan_planning_system_path = ros::package::getPath("ros2plan_planning_system");
-
-    srv.request.plan_path = ros2plan_planning_system_path + "/test/pddl/amazon/test_plan.pddl";
-
-    ros::service::waitForService(srv_name, ros::Duration(1));
-    client1.call(srv);
-
-    ros::Rate loop_rate = 10;
-    plan_messages_received = false;
-    while (!plan_messages_received && ros::ok()) {
-        loop_rate.sleep();
-        ros::spinOnce();
+    // Wait for the latched topic message.
+    auto start = node->now();
+    while (!plan_received && (node->now() - start) < rclcpp::Duration(10s)) {
+        rclcpp::spin_some(node);
+        rclcpp::sleep_for(50ms);
     }
+
+    ASSERT_TRUE(plan_received);
 
     std::vector<std::string> actual_action_names;
     std::vector<std::string> expected_action_names = {"load-truck", "walk", "board-truck",
                         "drive-truck", "drive-truck", "unload-truck"};
 
-    for (auto rit=simple_plan_messages.begin(); rit!=simple_plan_messages.end(); rit++) {
-        actual_action_names.push_back(rit->name);
+    for (const auto & action : simple_plan_messages) {
+        actual_action_names.push_back(action.name);
     }
 
     ASSERT_EQ(expected_action_names, actual_action_names);
@@ -110,14 +141,13 @@ GTEST_TEST(ParsingInterfaceTests, Test4_action_id_unique) {
     bool unique = true;
     int prevId = 1000;
     int currId;
-    for (auto rit=simple_plan_messages.begin(); rit!=simple_plan_messages.end(); rit++) {
-        currId = rit->action_id;
-        if(currId == prevId){
+    for (const auto & action : simple_plan_messages) {
+        currId = action.action_id;
+        if (currId == prevId) {
             unique = false;
             break;
-         }
-        else{
-            prevId = rit->action_id;
+        } else {
+            prevId = action.action_id;
         }
     }
 
@@ -134,13 +164,11 @@ GTEST_TEST(ParsingInterfaceTests, Test5_full_complete_plan) {
     std::vector<float> expected_durations = {0.001, 0.001, 0.001, 0.001, 0.001, 0.001};
     std::vector<float> expected_dispatch_time = {0, 0, 0.001, 0.002, 0.003, 0.004};
 
-
-    for (auto rit=simple_plan_messages.begin(); rit!=simple_plan_messages.end(); rit++) {
-        actual_parameter_size.push_back(rit->parameters.size());
-        actual_durations.push_back(rit->duration);
-        actual_dispatch_time.push_back(rit->dispatch_time);
+    for (const auto & action : simple_plan_messages) {
+        actual_parameter_size.push_back(action.parameters.size());
+        actual_durations.push_back(action.duration);
+        actual_dispatch_time.push_back(action.dispatch_time);
     }
-
 
     ASSERT_EQ(expected_parameter_size, actual_parameter_size);
     ASSERT_EQ(expected_durations, actual_durations);
@@ -148,32 +176,38 @@ GTEST_TEST(ParsingInterfaceTests, Test5_full_complete_plan) {
 }
 
 GTEST_TEST(ParsingInterfaceTests, Test6_esterel_plan_messages_published_on_plan_topic) {
+    auto node = rclcpp::Node::make_shared("parsing_interface_test_esterel_sub");
 
-    ros::NodeHandle nh("~");
+    bool plan_received = false;
+    // The esterel parser publishes on a latched (transient_local) topic.
+    auto sub = node->create_subscription<EsterelPlan>(
+        kEsterelPlanTopic, rclcpp::QoS(1).transient_local(),
+        [&](EsterelPlan::SharedPtr msg) {
+            retrieved_esterel_plan = *msg;
+            plan_received = true;
+        });
 
-    ros::Subscriber sub = nh.subscribe<ros2plan_dispatch_msgs::EsterelPlan>
-                    ("/ros2plan_parsing_interface_esterel/complete_plan", 1000, &esterelTestCallback);
+    // Trigger esterel parsing from file (which publishes the esterel plan on the topic).
+    auto client = node->create_client<ParsingService>(kEsterelParseFromFileSrv);
+    ASSERT_TRUE(client->wait_for_service(10s));
+    auto req = std::make_shared<ParsingService::Request>();
+    req->plan_path = test_plan_path();
+    auto future = client->async_send_request(req);
+    ASSERT_EQ(rclcpp::spin_until_future_complete(node, future, 10s),
+              rclcpp::FutureReturnCode::SUCCESS);
+    EXPECT_TRUE(future.get()->plan_parsed);
 
-    std::string srv_name = "/ros2plan_parsing_interface_esterel/parse_plan_from_file";
-    ros::ServiceClient client1 = nh.serviceClient<ros2plan_dispatch_msgs::ParsingService>(srv_name);
-    ros2plan_dispatch_msgs::ParsingService srv;
-
-    std::string ros2plan_planning_system_path = ros::package::getPath("ros2plan_planning_system");
-
-    srv.request.plan_path = ros2plan_planning_system_path + "/test/pddl/amazon/test_plan.pddl";
-
-    ros::service::waitForService(srv_name, ros::Duration(1));
-    client1.call(srv);
-
-    ros::Rate loop_rate = 10;
-    esterel_plan_messages_received = false;
-    while (!esterel_plan_messages_received && ros::ok()) {
-    loop_rate.sleep();
-    ros::spinOnce();
+    // Wait for the latched topic message.
+    auto start = node->now();
+    while (!plan_received && (node->now() - start) < rclcpp::Duration(10s)) {
+        rclcpp::spin_some(node);
+        rclcpp::sleep_for(50ms);
     }
 
-    int actual_number_of_nodes = retrieved_esterelPlan.nodes.size();
-    int actual_number_of_edges = retrieved_esterelPlan.edges.size();
+    ASSERT_TRUE(plan_received);
+
+    int actual_number_of_nodes = retrieved_esterel_plan.nodes.size();
+    int actual_number_of_edges = retrieved_esterel_plan.edges.size();
 
     int expected_number_of_nodes = 13;
     int expected_number_of_edges = 21;
@@ -188,15 +222,13 @@ GTEST_TEST(ParsingInterfaceTests, Test7_esterel_plan_node_id_unique) {
     int prevId = 1000;
     int currId;
 
-    for (auto rit=retrieved_esterelPlan.nodes.begin(); rit!=retrieved_esterelPlan.nodes.end(); rit++) {
-
-        currId = rit->node_id;
-        if(currId == prevId){
+    for (const auto & node : retrieved_esterel_plan.nodes) {
+        currId = node.node_id;
+        if (currId == prevId) {
             unique = false;
             break;
-        }
-        else{
-            prevId = rit->node_id;
+        } else {
+            prevId = node.node_id;
         }
     }
 
@@ -209,16 +241,14 @@ GTEST_TEST(ParsingInterfaceTests, Test8_esterel_plan_edge_id_unique) {
     int prevId = 1000;
     int currId;
 
-    for (auto rit=retrieved_esterelPlan.edges.begin(); rit!=retrieved_esterelPlan.edges.end(); rit++) {
-
-        std::cout << rit->edge_id << std::endl;
-        currId = rit->edge_id;
-        if(currId == prevId){
+    for (const auto & edge : retrieved_esterel_plan.edges) {
+        std::cout << edge.edge_id << std::endl;
+        currId = edge.edge_id;
+        if (currId == prevId) {
             unique = false;
             break;
-        }
-        else{
-            prevId = rit->edge_id;
+        } else {
+            prevId = edge.edge_id;
         }
     }
 
@@ -226,10 +256,11 @@ GTEST_TEST(ParsingInterfaceTests, Test8_esterel_plan_edge_id_unique) {
 }
 
 // Run all the tests that were declared with TEST()
-int main(int argc, char **argv) {
-
+int main(int argc, char ** argv)
+{
+    rclcpp::init(argc, argv);
     testing::InitGoogleTest(&argc, argv);
-    ros::init(argc, argv, "ParsingInterfaceTests");
-
-    return RUN_ALL_TESTS();
+    int result = RUN_ALL_TESTS();
+    rclcpp::shutdown();
+    return result;
 }

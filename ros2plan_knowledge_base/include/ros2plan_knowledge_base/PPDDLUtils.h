@@ -5,30 +5,36 @@
 #ifndef ROS2PLAN_KNOWLEDGE_BASE_RDDLOPERATORUTILS_H
 #define ROS2PLAN_KNOWLEDGE_BASE_RDDLOPERATORUTILS_H
 
-#define NOT_IMPLEMENTED(str) ROS_WARN_STREAM(__FILE__ << ":" << __LINE__ << ": " << str)
+#include <rclcpp/rclcpp.hpp>
+
+#define NOT_IMPLEMENTED(str) RCLCPP_WARN_STREAM(rclcpp::get_logger("PPDDLUtils"), __FILE__ << ":" << __LINE__ << ": " << str)
 #define NOT_IMPLEMENTED_OPERATOR NOT_IMPLEMENTED("Unknown or unsupported operand type for the action preconditions.")
 
-#include <ros2plan_knowledge_msgs/DomainFormula.h>
-#include <ros2plan_knowledge_msgs/DomainAssignment.h>
-#include <ros2plan_knowledge_msgs/ProbabilisticEffect.h>
-#include <ros2plan_knowledge_msgs/KnowledgeItem.h>
+#include <ros2plan_knowledge_msgs/msg/domain_formula.hpp>
+#include <ros2plan_knowledge_msgs/msg/domain_assignment.hpp>
+#include <ros2plan_knowledge_msgs/msg/domain_inequality.hpp>
+#include <ros2plan_knowledge_msgs/msg/probabilistic_effect.hpp>
+#include <ros2plan_knowledge_msgs/msg/expr_base.hpp>
+#include <ros2plan_knowledge_msgs/msg/expr_composite.hpp>
+#include <ros2plan_knowledge_msgs/msg/knowledge_item.hpp>
+#include <diagnostic_msgs/msg/key_value.hpp>
 #include "PPDDLParser.h"
 
 namespace KCL_ros2plan {
-    typedef std::vector<ros2plan_knowledge_msgs::DomainFormula> vectorDF;
-    typedef std::vector<ros2plan_knowledge_msgs::DomainAssignment> vectorDA;
-    typedef std::vector<ros2plan_knowledge_msgs::ProbabilisticEffect> vectorPE;
+    typedef std::vector<ros2plan_knowledge_msgs::msg::DomainFormula> vectorDF;
+    typedef std::vector<ros2plan_knowledge_msgs::msg::DomainAssignment> vectorDA;
+    typedef std::vector<ros2plan_knowledge_msgs::msg::ProbabilisticEffect> vectorPE;
 
 
     class PPDDLUtils {
     private:
-        static ros2plan_knowledge_msgs::DomainAssignment getUpdate(const ppddl_parser::UpdateEffect *pEffect, PPDDLDomainPtr domain, map<ppddl_parser::Term, string> &map);
+        static ros2plan_knowledge_msgs::msg::DomainAssignment getUpdate(const ppddl_parser::UpdateEffect *pEffect, PPDDLDomainPtr domain, map<ppddl_parser::Term, string> &map);
 
         // Moves elements of b to the end of a
-        static inline void join(std::vector<ros2plan_knowledge_msgs::ExprBase>& a, std::vector<ros2plan_knowledge_msgs::ExprBase>& b);
+        static inline void join(std::vector<ros2plan_knowledge_msgs::msg::ExprBase>& a, std::vector<ros2plan_knowledge_msgs::msg::ExprBase>& b);
 
         static void fillForallGoal(const ppddl_parser::Forall *forall, PPDDLDomainPtr domain, PPDDLProblemPtr problem,
-                                size_t paramid, std::vector<ros2plan_knowledge_msgs::KnowledgeItem> &out_goal,
+                                size_t paramid, std::vector<ros2plan_knowledge_msgs::msg::KnowledgeItem> &out_goal,
                                    std::map<ppddl_parser::Term, std::string>& var_decl, bool is_negative);
 
     public:
@@ -44,20 +50,20 @@ namespace KCL_ros2plan {
          * @param var_names [in] naming of variables
          */
         static void fillPreconditions(const ppddl_parser::StateFormula &precondition, PPDDLDomainPtr domain,
-                                      ros2plan_knowledge_msgs::DomainFormula &op_head, vectorDF &out_pos_cond,
+                                      ros2plan_knowledge_msgs::msg::DomainFormula &op_head, vectorDF &out_pos_cond,
                                       vectorDF &out_neg_cond, std::map<ppddl_parser::Term, std::string> &var_decl,
                                       std::map<std::string, int> &var_names);
 
         static void fillGoal(const ppddl_parser::StateFormula &goal, PPDDLDomainPtr domain, PPDDLProblemPtr problem,
-                              std::vector<ros2plan_knowledge_msgs::KnowledgeItem>& out_goal,
+                              std::vector<ros2plan_knowledge_msgs::msg::KnowledgeItem>& out_goal,
                              std::map<ppddl_parser::Term, std::string> &var_decl, bool is_negative);
 
         static void fillEffects(const ppddl_parser::Effect &effect, PPDDLDomainPtr domain, vectorDF &out_add_eff, vectorDF &out_del_eff,
                                 vectorPE &out_pe_eff,
                                 vectorDA &assign_eff, std::map<ppddl_parser::Term, std::string> &var_decl);
 
-        static ros2plan_knowledge_msgs::ExprComposite getExpression(const ppddl_parser::Expression &exp, PPDDLDomainPtr domain, std::map<ppddl_parser::Term, string> &var_decl);
-        static ros2plan_knowledge_msgs::DomainFormula getAtom(const ppddl_parser::Atom* a, PPDDLDomainPtr domain, std::map<ppddl_parser::Term, string> &var_decl, bool instantiate_variable=false);
+        static ros2plan_knowledge_msgs::msg::ExprComposite getExpression(const ppddl_parser::Expression &exp, PPDDLDomainPtr domain, std::map<ppddl_parser::Term, string> &var_decl);
+        static ros2plan_knowledge_msgs::msg::DomainFormula getAtom(const ppddl_parser::Atom* a, PPDDLDomainPtr domain, std::map<ppddl_parser::Term, string> &var_decl, bool instantiate_variable=false);
 
     };
 }

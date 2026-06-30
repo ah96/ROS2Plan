@@ -22,8 +22,10 @@ namespace KCL_ros2plan {
         params.name = get_parameter("pddl_action_name").as_string();
         std::string kb = get_parameter("knowledge_base").as_string();
 
-        // Satellite node for blocking KB calls in setup() (executor not yet running)
-        auto svc_node = std::make_shared<rclcpp::Node>("rp_action_setup_svc_node");
+        // Satellite node for blocking KB calls in setup() (executor not yet running).
+        // The name is made unique per action interface so several action nodes running
+        // concurrently do not share a node name (which produces rosout publisher clashes).
+        auto svc_node = std::make_shared<rclcpp::Node>(std::string(get_name()) + "_setup_svc");
 
         // fetch action params from KB
         std::string op_details_svc = "/" + kb + "/domain/operator_details";
@@ -37,7 +39,9 @@ namespace KCL_ros2plan {
         auto opReq = std::make_shared<ros2plan_knowledge_msgs::srv::GetDomainOperatorDetailsService::Request>();
         opReq->name = params.name;
         auto opFuture = op_client->async_send_request(opReq);
-        if (rclcpp::spin_until_future_complete(svc_node, opFuture, std::chrono::seconds(10))
+        // Allow generous time: at startup several action interfaces query the knowledge base
+        // concurrently while it is still parsing the domain, so responses can be delayed.
+        if (rclcpp::spin_until_future_complete(svc_node, opFuture, std::chrono::seconds(30))
                 != rclcpp::FutureReturnCode::SUCCESS) {
             RCLCPP_ERROR(get_logger(), "KCL: (RPActionInterface) could not call KB for operator details: %s",
                          params.name.c_str());
@@ -75,7 +79,7 @@ namespace KCL_ros2plan {
             auto predReq = std::make_shared<ros2plan_knowledge_msgs::srv::GetDomainPredicateDetailsService::Request>();
             predReq->name = name;
             auto predFuture = pred_client->async_send_request(predReq);
-            if (rclcpp::spin_until_future_complete(svc_node, predFuture, std::chrono::seconds(5))
+            if (rclcpp::spin_until_future_complete(svc_node, predFuture, std::chrono::seconds(15))
                     != rclcpp::FutureReturnCode::SUCCESS) {
                 RCLCPP_ERROR(get_logger(), "KCL: (RPActionInterface) could not call KB for predicate details: %s",
                              name.c_str());

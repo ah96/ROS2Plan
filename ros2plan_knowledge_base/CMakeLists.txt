@@ -42,8 +42,19 @@ set(KNOWLEDGE_SOURCES
     src/VALVisitorProblem.cpp
 )
 
-option(ROS2PLAN_BUILD_RDDL  "Build RDDL knowledge base support"  OFF)
-option(ROS2PLAN_BUILD_PPDDL "Build PPDDL knowledge base support" OFF)
+# Keep these defaults in sync with ros2plan_dependencies (the KB links the parser
+# libraries that package builds). RDDL needs GCC >= 12 / Clang (GCC 11 ICEs), so it
+# defaults ON only on a capable toolchain; PPDDL builds everywhere. Override with -D...=ON/OFF.
+if((CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS 12)
+   OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  set(ROS2PLAN_RDDL_DEFAULT ON)
+else()
+  set(ROS2PLAN_RDDL_DEFAULT OFF)
+  message(STATUS "[${PROJECT_NAME}] ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION} < GCC 12: RDDL KB support defaults OFF (build with g++-12/Clang or -DROS2PLAN_BUILD_RDDL=ON to enable).")
+endif()
+
+option(ROS2PLAN_BUILD_RDDL  "Build RDDL knowledge base support"  ${ROS2PLAN_RDDL_DEFAULT})
+option(ROS2PLAN_BUILD_PPDDL "Build PPDDL knowledge base support" ON)
 
 if(ROS2PLAN_BUILD_RDDL)
   list(APPEND KNOWLEDGE_SOURCES
@@ -122,5 +133,24 @@ install(TARGETS knowledgeBase
 
 install(DIRECTORY launch/
     DESTINATION share/${PROJECT_NAME}/launch)
+
+#############
+## Testing ##
+#############
+
+if(BUILD_TESTING)
+  find_package(ament_cmake_gtest REQUIRED)
+  find_package(launch_testing_ament_cmake REQUIRED)
+
+  # Launch-test: brings up the knowledge base with the amazon (driverlog-simple) fixture
+  # (installed by ros2plan_planning_system) and exercises its services.
+  ament_add_gtest_executable(knowledge_base_test test/src/KnowledgeBaseTests.cpp)
+  ament_target_dependencies(knowledge_base_test
+    rclcpp std_srvs diagnostic_msgs ros2plan_knowledge_msgs)
+  add_launch_test(test/launch/knowledge_base_test.py
+    TARGET knowledge_base_launch_test
+    ARGS "test_exe:=$<TARGET_FILE:knowledge_base_test>"
+    TIMEOUT 120)
+endif()
 
 ament_package()
