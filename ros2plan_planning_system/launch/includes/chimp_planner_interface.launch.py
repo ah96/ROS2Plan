@@ -17,7 +17,7 @@ def generate_launch_description():
         DeclareLaunchArgument('use_problem_topic', default_value='true'),
         DeclareLaunchArgument(
             'problem_topic',
-            default_value='/ros2plan_problem_interface/problem_instance'),
+            default_value='problem_instance'),
         DeclareLaunchArgument('planner_topic', default_value='planner_output'),
         DeclareLaunchArgument('common_path', default_value=common_path_default),
         DeclareLaunchArgument(

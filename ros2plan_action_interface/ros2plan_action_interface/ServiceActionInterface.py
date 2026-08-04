@@ -17,7 +17,9 @@ class ServiceActionInterface(BaseActionInterface):
         self._has_default_request = 'default_service_request' in action_config
         self._has_default_response = 'default_service_response' in action_config
         # Satellite node for blocking service calls from a non-executor thread
-        self._svc_node = Node('ros2plan_service_action_svc_node')
+        # use_global_arguments=False keeps this name: launch_ros passes the main node's
+        # name as a process-wide `-r __node:=` remap, which would rename this one too.
+        self._svc_node = Node('ros2plan_service_action_svc_node', use_global_arguments=False)
 
     def run(self, dispatch_msg):
         t = threading.Thread(target=self.run_thread, args=(dispatch_msg,))

@@ -11,9 +11,9 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument('node_name', default_value='ros2plan_planner_interface'),
         DeclareLaunchArgument('use_problem_topic', default_value='true'),
-        DeclareLaunchArgument(
-            'problem_topic',
-            default_value='/ros2plan_problem_interface/problem_instance'),
+        # The problem interface publishes under a relative name, which resolves to
+        # /problem_instance in the root namespace. Subscribe to the same relative name.
+        DeclareLaunchArgument('problem_topic', default_value='problem_instance'),
         DeclareLaunchArgument('planner_topic', default_value='planner_output'),
         DeclareLaunchArgument(
             'domain_path',

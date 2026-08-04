@@ -19,8 +19,9 @@ These tests are built and run with `colcon` (ament). There are two kinds:
 From the colcon workspace root:
 
 ```bash
+export ROS_DOMAIN_ID=78   # see "Notes" — isolate from other ROS 2 systems
 colcon build --packages-select ros2plan_planning_system
-colcon test  --packages-select ros2plan_planning_system
+colcon test  --packages-select ros2plan_planning_system --executor sequential
 colcon test-result --verbose
 ```
 
@@ -33,6 +34,13 @@ launch_test src/<path-to>/ros2plan_planning_system/test/launch/problem_interface
 
 ## Notes
 
+* **Run on a dedicated `ROS_DOMAIN_ID`.** The tests launch nodes under fixed names
+  (`ros2plan_knowledge_base` and friends), so any other ROS 2 system reachable on the same
+  domain is indistinguishable from the one under test — the tests will query the wrong nodes
+  and fail in confusing ways (a knowledge base answering with a different domain's predicates).
+  On a machine running another ROS2Plan system, the same suite gives 8 failures on the default
+  domain and passes fully on a dedicated one. Run the packages' tests `--executor sequential`
+  too: the fixed service timeouts flake when several packages' tests run concurrently.
 * In ROS 2 the planning-system nodes advertise their trigger services/topics with relative
   names in the default namespace, so they resolve to the **root** namespace
   (`/problem_generation_server_params`, `/planning_server_params`, `/planner_output`,

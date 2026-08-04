@@ -43,17 +43,8 @@ set(KNOWLEDGE_SOURCES
 )
 
 # Keep these defaults in sync with ros2plan_dependencies (the KB links the parser
-# libraries that package builds). RDDL needs GCC >= 12 / Clang (GCC 11 ICEs), so it
-# defaults ON only on a capable toolchain; PPDDL builds everywhere. Override with -D...=ON/OFF.
-if((CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS 12)
-   OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  set(ROS2PLAN_RDDL_DEFAULT ON)
-else()
-  set(ROS2PLAN_RDDL_DEFAULT OFF)
-  message(STATUS "[${PROJECT_NAME}] ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION} < GCC 12: RDDL KB support defaults OFF (build with g++-12/Clang or -DROS2PLAN_BUILD_RDDL=ON to enable).")
-endif()
-
-option(ROS2PLAN_BUILD_RDDL  "Build RDDL knowledge base support"  ${ROS2PLAN_RDDL_DEFAULT})
+# libraries that package builds).
+option(ROS2PLAN_BUILD_RDDL  "Build RDDL knowledge base support"  ON)
 option(ROS2PLAN_BUILD_PPDDL "Build PPDDL knowledge base support" ON)
 
 if(ROS2PLAN_BUILD_RDDL)

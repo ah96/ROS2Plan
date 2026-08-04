@@ -285,6 +285,12 @@ if(BUILD_TESTING)
     ARGS "test_exe:=$<TARGET_FILE:plan_dispatch_test>"
     TIMEOUT 180)
 
+  # The shipped launch files, run the way users run them. The tests above build their own
+  # launch descriptions, so they stay green even when launch/ is broken; this one does not.
+  add_launch_test(test/launch/interfaced_system_test.py
+    TARGET interfaced_system_launch_test
+    TIMEOUT 300)
+
   # CHIMP planner interface — only when the (Java) CHIMP planner is built.
   if(ROS2PLAN_COMPILE_CHIMP)
     ament_add_gtest_executable(chimp_planner_interface_test test/src/ChimpPlannerInterfaceTests.cpp)

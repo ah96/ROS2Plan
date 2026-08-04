@@ -42,8 +42,11 @@ class Ros2planSensing(Node):
         self.knowledge_base = self.get_parameter('knowledge_base').value
         kb = self.knowledge_base
 
-        # Satellite node for blocking service calls from background threads
-        self._svc_node = Node('ros2plan_sensing_svc_node')
+        # Satellite node for blocking service calls from background threads.
+        # use_global_arguments=False keeps the name below: launch_ros passes the node name
+        # as a process-wide `-r __node:=` remap, which would otherwise rename this node too
+        # and leave two nodes sharing one name in the graph.
+        self._svc_node = Node('ros2plan_sensing_svc_node', use_global_arguments=False)
 
         self._update_kb_client = self._svc_node.create_client(
             KnowledgeUpdateServiceArray, kb + '/update_array')
@@ -114,6 +117,9 @@ class Ros2planSensing(Node):
             self.scripts = module
             self.scripts.get_kb_attribute = self.get_kb_attribute
             self.scripts.rclpy = rclpy
+            # ROS 2 has no global parameter server, so scripts that need parameters
+            # read them off this node instead of the ROS 1 rospy.get_param.
+            self.scripts.node = self
 
         self.sensed_topics = {}
         self.sensed_services = {}
@@ -206,7 +212,9 @@ class Ros2planSensing(Node):
             if len(kb_params) != len(params):
                 self.get_logger().error(
                     'KCL: (Ros2planSensing) Parameters for %s do not match the knowledge base' % predicate_name)
-                rclpy.shutdown()
+                # No rclpy.shutdown() here: unlike ROS 1's signal_shutdown, it invalidates the
+                # context immediately, so every later service call in this loop would raise.
+                # The (False, True) return already makes the caller skip this predicate.
                 return (False, True)
             wildcard = False
             for i, p in enumerate(params):
@@ -216,7 +224,7 @@ class Ros2planSensing(Node):
                     else:
                         self.get_logger().error(
                             'KCL: (Ros2planSensing) Unknown instance "%s" for predicate "%s"' % (p, predicate_name))
-                        rclpy.shutdown()
+                        # See above: skip the predicate instead of tearing down the context.
                         return (False, True)
                 else:
                     wildcard = True
@@ -243,7 +251,16 @@ class Ros2planSensing(Node):
             self.get_logger().error('Error: msg_type not specified for %s' % predicate_name)
             return False
 
-        msg_class = self.import_msg(msg_type_str)
+        # A config may name a message package that is not installed (the shipped
+        # example.yaml uses kobuki_msgs, which has no ROS 2 release). Skip just that
+        # predicate rather than taking the whole sensing interface down with it.
+        try:
+            msg_class = self.import_msg(msg_type_str)
+        except (ImportError, AttributeError) as e:
+            self.get_logger().error(
+                'KCL: (Ros2planSensing) Predicate %s: message type "%s" is unavailable (%s); '
+                'skipping this predicate.' % (predicate_name, msg_type_str, e))
+            return False
 
         try:
             topics = predicate_info['topic']
@@ -295,7 +312,16 @@ class Ros2planSensing(Node):
             self.get_logger().error('Error: srv_type not specified for %s' % predicate_name)
             return False
 
-        srv_class = self.import_srv(srv_type_str)
+        # Same as subscribe_topic: an unavailable srv package skips this predicate
+        # rather than aborting the node.
+        try:
+            srv_class = self.import_srv(srv_type_str)
+        except (ImportError, AttributeError) as e:
+            self.get_logger().error(
+                'KCL: (Ros2planSensing) Predicate %s: service type "%s" is unavailable (%s); '
+                'skipping this predicate.' % (predicate_name, srv_type_str, e))
+            return False
+
         self.service_type_names.append(srv_class)
         self.clients_sub_idx.append(predicate_info['sub_idx'])
 

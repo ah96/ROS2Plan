@@ -71,8 +71,13 @@ namespace KCL_ros2plan {
         // Create callback groups
         srv_cbg_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
 
-        // Create satellite node for deadlock-safe service calls (not added to any executor)
-        svc_node_ = std::make_shared<rclcpp::Node>("problem_interface_svc_node");
+        // Create satellite node for deadlock-safe service calls (not added to any executor).
+        // use_global_arguments(false) keeps the name below: launch_ros passes the node name
+        // as a process-wide `-r __node:=` remap, which would otherwise rename this node too
+        // and leave two nodes sharing one name in the graph.
+        svc_node_ = std::make_shared<rclcpp::Node>(
+            "problem_interface_svc_node",
+            rclcpp::NodeOptions().use_global_arguments(false));
 
         // Create the problem generator
         problem_generator_ = ProblemGeneratorFactory::createProblemGenerator(pg_type_str, knowledge_base, svc_node_);

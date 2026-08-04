@@ -1,20 +1,28 @@
 # ROS2Plan
 
-ROS2Plan is a port of the [ROSPlan](https://github.com/KCL-Planning/ROSPlan) task planning framework to **ROS2 Humble Hawksbill** on Ubuntu 22.04.  It preserves the full feature set of the original — PDDL/HDDL knowledge base, multiple planner adapters, plan dispatching, sensing interface, rqt GUI — while conforming to ROS2 conventions throughout.
+ROS2Plan is a port of the [ROSPlan](https://github.com/KCL-Planning/ROSPlan) task planning
+framework to **ROS 2 Humble Hawksbill** on Ubuntu 22.04. It preserves the full feature set of
+the original — a PDDL/HDDL/PPDDL/RDDL knowledge base, thirteen planner adapters, plan parsing
+and dispatch, action and sensing interfaces, and the rqt GUI — while following ROS 2
+conventions throughout.
 
 ## Packages
 
 | Package | Description |
 |---|---|
-| `ros2plan_dependencies` | VAL PDDL validator, HDDL parser, POPF/CHIMP planner binaries |
+| `ros2plan_dependencies` | Parser libraries: VAL (PDDL), HDDL, PPDDL, RDDL, and the IPPC server |
 | `ros2plan_knowledge_msgs` | Messages, services, and actions for the knowledge base |
 | `ros2plan_dispatch_msgs` | Messages, services, and actions for plan dispatch |
-| `ros2plan_knowledge_base` | PDDL/HDDL knowledge base node |
-| `ros2plan_planning_system` | Problem generation, planner interfaces (POPF, CHIMP, …), plan parsing, plan dispatch |
-| `ros2plan_action_interface` | Python base classes for action execution nodes |
-| `ros2plan_sensing_interface` | Periodic knowledge base updates from sensor callbacks |
+| `ros2plan_knowledge_base` | Knowledge base node (PDDL, HDDL, PPDDL, RDDL) |
+| `ros2plan_planning_system` | Problem generation, planner interfaces, plan parsing, plan dispatch, bundled planner binaries |
+| `ros2plan_action_interface` | Action interface manager and Python base classes for action execution |
+| `ros2plan_sensing_interface` | Periodic knowledge base updates from topics and services |
 | `ros2plan_rqt` | rqt GUI plugins (dispatcher, plan viewer, action config) |
 | `ros2plan` | Meta-package |
+
+Planner adapters shipped with `ros2plan_planning_system`: POPF, FF, Metric-FF, FD, TFD, LPG,
+UPM, PPRP, SMT, PANDA, CHIMP, RDDLSim and an online interface. POPF, Metric-FF, Contingent-FF,
+PANDA and PROST binaries are bundled under `common/bin/`.
 
 ## Requirements
 
@@ -27,39 +35,39 @@ ROS2Plan is a port of the [ROSPlan](https://github.com/KCL-Planning/ROSPlan) tas
 ## Installation
 
 ```bash
+sudo apt install bison flex default-jdk libboost-filesystem-dev
 mkdir -p ~/ros2_ws/src
 cd ~/ros2_ws/src
-git clone https://github.com/your-org/ROS2Plan.git
+git clone https://github.com/ah96/ROS2Plan.git
 cd ~/ros2_ws
 rosdep install --from-paths src --ignore-src -r -y
 colcon build
 source install/setup.bash
 ```
 
+Build with the **system** Python interpreter (`/usr/bin/python3`). The ROS 2 interface
+generators need `empy` from the ROS installation, which a virtual environment will usually
+shadow.
+
 ### Knowledge base: PDDL, HDDL, PPDDL and RDDL
 
-The knowledge base supports four modelling languages. **PDDL** and **HDDL** are always
-built. **PPDDL** (probabilistic PDDL) is built **by default**. **RDDL** requires a C++ compiler
-of **GCC ≥ 12 or Clang** (GCC 11 — the Ubuntu 22.04 default — hits an internal compiler error on
-the RDDL parser), so it is auto-enabled **only when such a compiler is active**, and skipped
-otherwise:
+The knowledge base supports four modelling languages — **PDDL**, **HDDL**, **PPDDL**
+(probabilistic PDDL) and **RDDL** — and all four are built by a plain `colcon build` on the
+stock Ubuntu 22.04 toolchain:
 
 ```bash
-# Default (GCC 11): PDDL + HDDL + PPDDL
+# PDDL + HDDL + PPDDL + RDDL
 colcon build
-
-# Full set including RDDL — build with GCC 12 (or Clang):
-sudo apt install g++-12 gcc-12
-CC=gcc-12 CXX=g++-12 colcon build
 ```
 
-Each language can be forced on or off explicitly:
+PPDDL and RDDL can be turned off explicitly if you do not need probabilistic planning and
+want a shorter build:
 
 ```bash
-colcon build --cmake-args -DROS2PLAN_BUILD_RDDL=ON -DROS2PLAN_BUILD_PPDDL=OFF
+colcon build --cmake-args -DROS2PLAN_BUILD_RDDL=OFF -DROS2PLAN_BUILD_PPDDL=OFF
 ```
 
-> The same flag (and the GCC-12 requirement for RDDL) applies to both
+> The same flags apply to both
 > `ros2plan_dependencies` and `ros2plan_knowledge_base`; the defaults are kept in sync so a
 > plain `colcon build` of the whole workspace is consistent.
 
@@ -76,6 +84,11 @@ It ends with the robot having visited every waypoint and re-docked
 (`goal_achieved=True`). The script is also the clearest reference for how each node is
 launched and wired together.
 
+The demo runs on `ROS_DOMAIN_ID=77` so it cannot collide with other ROS 2 systems already
+running on the default domain — ROS2Plan nodes use fixed node names, so two knowledge bases
+on one domain are indistinguishable. Export a different `ROS_DOMAIN_ID` before running to
+override it, and export the same value in any other shell you want to inspect the demo from.
+
 To run the steps yourself, the trigger services live in the **root** namespace, and the
 planner is best triggered with the `/planning_server` service (which uses the node
 parameters):
@@ -87,7 +100,9 @@ ros2 service call /parse_plan               std_srvs/srv/Empty "{}"    # parse t
 ros2 service call /dispatch_plan ros2plan_dispatch_msgs/srv/DispatchService "{}"  # dispatch
 ```
 
-See the [documentation and tutorials](docs/index.md) for the full step-by-step walkthrough.
+`docs/examples/turtlebot/` contains the demo script, the PDDL domain and a helper that
+populates the knowledge base, so the sequence above can be run end to end from a clean
+workspace.
 
 ## Architecture
 
@@ -111,9 +126,7 @@ Planning System
 
 ## Key ROS2 differences from ROSPlan
 
-A full description of every change made during the port is in
-[docs/migration/ros2_migration.md](docs/migration/ros2_migration.md) (a PDF can be generated
-from it — see [below](#generating-the-migration-pdf)).  A short summary:
+A short summary of the port:
 
 - All nodes inherit `rclcpp::Node` and run under `MultiThreadedExecutor`
 - Latched publishers use `rclcpp::QoS(1).transient_local()`; **subscribers must also declare
@@ -135,15 +148,35 @@ ros2 launch ros2plan_planning_system simulated_action.launch.py \
     action_probability:=1.0
 ```
 
+## Action interfaces
+
+Each PDDL operator needs a node that executes it. `ros2plan_action_interface` provides the
+manager plus base classes for the three execution styles — ROS 2 action, service, and FSM:
+
+```bash
+ros2 run ros2plan_action_interface action_interface_manager --ros-args \
+    -p actions_config:=$(ros2 pkg prefix ros2plan_action_interface)/share/ros2plan_action_interface/config/example_config.yaml
+```
+
+`example_config.yaml` documents the configuration format, including the `($pddlparam …)`
+substitutions that pass PDDL action parameters into goal fields.
+
 ## Sensing interface
 
 ```bash
+ros2 launch ros2plan_sensing_interface ros2plan_sensing_example.launch.py
+
+# or point it at your own configuration
 ros2 run ros2plan_sensing_interface sensing_interface \
     --ros-args -p config_path:=/path/to/sensing_config.yaml
 ```
 
-The YAML format is unchanged from ROS1.  See
-`ros2plan_sensing_interface/config/sensing_example.yaml` for a template.
+The YAML format is unchanged from ROSPlan. `ros2plan_sensing_interface/example.yaml` is a
+commented template covering topic-sensed and service-sensed predicates; the Python helper it
+references (`example.py`) computes predicate values that cannot be expressed as a one-line
+`operation`. A predicate whose message or service type is not installed is skipped with a
+logged error rather than aborting the node — the shipped example uses `kobuki_msgs`, which has
+no ROS 2 release, so its `docked`/`undocked` entries are skipped on a stock install.
 
 ## rqt plugins
 
@@ -159,14 +192,18 @@ The following plugins are available under *Plugins → ROS2Plan*:
 - **Esterel Plan Viewer** — graphical plan visualization
 - **Action Config** — configure action interface parameters
 
-## Generating the migration PDF
-
-The migration documentation can be regenerated from the markdown source:
+## Running the tests
 
 ```bash
-pip install weasyprint markdown
-python3 docs/migration/md_to_pdf.py    # writes docs/migration/ros2_migration.pdf
+export ROS_DOMAIN_ID=78
+colcon test --executor sequential
+colcon test-result --verbose
 ```
+
+Both settings matter. The integration tests launch nodes under fixed names
+(`ros2plan_knowledge_base` and friends), so any other ROS 2 system reachable on the same domain
+is indistinguishable from the one under test; and the fixed service timeouts flake when several
+packages' tests run concurrently on a small machine.
 
 ## License
 

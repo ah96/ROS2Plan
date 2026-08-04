@@ -1,5 +1,5 @@
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, GroupAction, IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
@@ -47,54 +47,67 @@ def generate_launch_description():
             }],
         ),
 
+        # Each include is wrapped in a scoped GroupAction. IncludeLaunchDescription does
+        # not push a scope of its own, so without this the first `node_name` declared
+        # (the problem interface's) sticks for every later include -- leaving all four
+        # nodes sharing one name -- and the same leak applies to every other argument.
+
         # Problem generation
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(
-                PathJoinSubstitution([includes, 'problem_interface.launch.py'])),
-            launch_arguments={
-                'knowledge_base': 'ros2plan_knowledge_base',
-                'domain_path': LaunchConfiguration('domain_path'),
-                'problem_path': LaunchConfiguration('autom_gen_problem_path'),
-                'problem_topic': 'problem_instance',
-            }.items(),
-        ),
+        GroupAction([
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(
+                    PathJoinSubstitution([includes, 'problem_interface.launch.py'])),
+                launch_arguments={
+                    'knowledge_base': 'ros2plan_knowledge_base',
+                    'domain_path': LaunchConfiguration('domain_path'),
+                    'problem_path': LaunchConfiguration('autom_gen_problem_path'),
+                    'problem_topic': 'problem_instance',
+                }.items(),
+            ),
+        ], scoped=True),
 
         # Planner interface
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(
-                PathJoinSubstitution([includes, 'planner_interface.launch.py'])),
-            launch_arguments={
-                'use_problem_topic': LaunchConfiguration('use_problem_topic'),
-                'problem_topic': '/ros2plan_problem_interface/problem_instance',
-                'planner_topic': 'planner_output',
-                'domain_path': LaunchConfiguration('domain_path'),
-                'problem_path': LaunchConfiguration('autom_gen_problem_path'),
-                'data_path': LaunchConfiguration('data_path'),
-                'planner_command': LaunchConfiguration('planner_command'),
-                'planner_interface': LaunchConfiguration('planner_interface'),
-            }.items(),
-        ),
+        GroupAction([
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(
+                    PathJoinSubstitution([includes, 'planner_interface.launch.py'])),
+                launch_arguments={
+                    'use_problem_topic': LaunchConfiguration('use_problem_topic'),
+                    'problem_topic': 'problem_instance',
+                    'planner_topic': 'planner_output',
+                    'domain_path': LaunchConfiguration('domain_path'),
+                    'problem_path': LaunchConfiguration('autom_gen_problem_path'),
+                    'data_path': LaunchConfiguration('data_path'),
+                    'planner_command': LaunchConfiguration('planner_command'),
+                    'planner_interface': LaunchConfiguration('planner_interface'),
+                }.items(),
+            ),
+        ], scoped=True),
 
         # Plan parsing
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(
-                PathJoinSubstitution([includes, 'parsing_interface.launch.py'])),
-            launch_arguments={
-                'knowledge_base': 'ros2plan_knowledge_base',
-                'planner_topic': '/ros2plan_planner_interface/planner_output',
-                'plan_topic': 'complete_plan',
-            }.items(),
-        ),
+        GroupAction([
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(
+                    PathJoinSubstitution([includes, 'parsing_interface.launch.py'])),
+                launch_arguments={
+                    'knowledge_base': 'ros2plan_knowledge_base',
+                    'planner_topic': 'planner_output',
+                    'plan_topic': 'complete_plan',
+                }.items(),
+            ),
+        ], scoped=True),
 
         # Plan dispatch
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(
-                PathJoinSubstitution([includes, 'dispatch_interface.launch.py'])),
-            launch_arguments={
-                'knowledge_base': 'ros2plan_knowledge_base',
-                'plan_topic': '/ros2plan_parsing_interface/complete_plan',
-                'action_dispatch_topic': 'action_dispatch',
-                'action_feedback_topic': 'action_feedback',
-            }.items(),
-        ),
+        GroupAction([
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(
+                    PathJoinSubstitution([includes, 'dispatch_interface.launch.py'])),
+                launch_arguments={
+                    'knowledge_base': 'ros2plan_knowledge_base',
+                    'plan_topic': 'complete_plan',
+                    'action_dispatch_topic': 'action_dispatch',
+                    'action_feedback_topic': 'action_feedback',
+                }.items(),
+            ),
+        ], scoped=True),
     ])

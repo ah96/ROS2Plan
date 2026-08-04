@@ -12,12 +12,10 @@ def generate_launch_description():
         DeclareLaunchArgument('action_duration_stddev', default_value='0.0'),
         DeclareLaunchArgument('action_probability', default_value='1.0'),
         DeclareLaunchArgument('knowledge_base', default_value='ros2plan_knowledge_base'),
-        DeclareLaunchArgument(
-            'action_dispatch_topic',
-            default_value='/ros2plan_plan_dispatcher/action_dispatch'),
-        DeclareLaunchArgument(
-            'action_feedback_topic',
-            default_value='/ros2plan_plan_dispatcher/action_feedback'),
+        # The dispatcher registers both topics under relative names, which resolve to
+        # /action_dispatch and /action_feedback in the root namespace. Use the same names here.
+        DeclareLaunchArgument('action_dispatch_topic', default_value='action_dispatch'),
+        DeclareLaunchArgument('action_feedback_topic', default_value='action_feedback'),
 
         Node(
             package='ros2plan_planning_system',

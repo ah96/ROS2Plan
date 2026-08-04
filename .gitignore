@@ -49,5 +49,14 @@ problem.pddl
 # Logs
 *.log
 
-# Claude Code memory (local only, not for publishing)
+# Local editor/tool state (never published)
 /.claude-memory/
+/.claude/
+
+# Documentation and migration notes are kept locally, except the runnable turtlebot
+# example that README's quick start invokes. Git cannot re-include a path whose parent
+# directory is excluded, so each level excludes its *contents* and re-admits the next.
+/docs/*
+!/docs/examples/
+/docs/examples/*
+!/docs/examples/turtlebot/

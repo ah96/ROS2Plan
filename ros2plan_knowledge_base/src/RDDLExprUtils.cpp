@@ -38,8 +38,13 @@ RDDLExprUtils::getExpression(const LogicalExpression *expr, const std::map<std::
 }
 
 ros2plan_knowledge_msgs::msg::ExprComposite RDDLExprUtils::getExpression(const Connective *expr, const std::map<std::string, std::string>& assign) {
-    assert(expr->exprs.size() == 2); // Assuming two operands in each
     ros2plan_knowledge_msgs::msg::ExprComposite ret;
+
+    // RDDL connectives are n-ary: `a ^ b ^ c` arrives as one Connective with three
+    // operands, and most IPC domains contain them. A single operand needs no operator
+    // at all; none is an empty expression.
+    if (expr->exprs.empty()) return ret;
+    if (expr->exprs.size() == 1) return getExpression(expr->exprs[0], assign);
 
     ros2plan_knowledge_msgs::msg::ExprBase base;
     base.expr_type = ros2plan_knowledge_msgs::msg::ExprBase::OPERATOR;
@@ -53,14 +58,15 @@ ros2plan_knowledge_msgs::msg::ExprComposite RDDLExprUtils::getExpression(const C
         NOT_IMPLEMENTED_EXPR;
         return ret;
     }
-    ret.tokens.push_back(base);
+    // Tokens are prefix (Polish) notation, so folding n operands left-associatively --
+    // (((a op b) op c) op d) -- is just (n-1) operator tokens followed by every operand
+    // in order. For the two-operand case this emits exactly what it always did.
+    for (size_t i = 0; i + 1 < expr->exprs.size(); ++i) ret.tokens.push_back(base);
 
-    ros2plan_knowledge_msgs::msg::ExprComposite operand1 = getExpression(expr->exprs[0], assign);
-    ros2plan_knowledge_msgs::msg::ExprComposite operand2 = getExpression(expr->exprs[1], assign);
-    //ret.tokens.insert(ret.tokens.end(), std::make_move_iterator(operand1.tokens.begin()), std::make_move_iterator(operand1.tokens.end()));
-    join(ret.tokens, operand1.tokens);
-    //ret.tokens.insert(ret.tokens.end(), std::make_move_iterator(operand2.tokens.begin()), std::make_move_iterator(operand2.tokens.end()));
-    join(ret.tokens, operand2.tokens);
+    for (const auto* operand : expr->exprs) {
+        ros2plan_knowledge_msgs::msg::ExprComposite sub = getExpression(operand, assign);
+        join(ret.tokens, sub.tokens);
+    }
     return ret;
 }
 

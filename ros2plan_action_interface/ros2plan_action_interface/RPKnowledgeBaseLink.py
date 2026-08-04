@@ -24,7 +24,8 @@ class RPKnowledgeBaseLink:
         self._node = node
         # Satellite node not added to any executor — used for blocking service calls
         # from non-executor threads without risk of deadlock.
-        self._svc_node = Node('rp_kb_link_svc_node')
+        # See ServiceActionInterface: immune to the process-wide `-r __node:=` remap.
+        self._svc_node = Node('rp_kb_link_svc_node', use_global_arguments=False)
 
         kb = '/ros2plan_knowledge_base'
         self._update_kb_client = self._svc_node.create_client(

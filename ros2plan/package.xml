@@ -3,9 +3,11 @@
   <name>ros2plan</name>
   <version>2.0.0</version>
   <description>ROS2Plan metapackage</description>
-  <maintainer email="amarhalilovic96@gmail.com">ROS2Plan maintainers</maintainer>
+  <maintainer email="amar.halilovic@uni-ulm.de">Amar Halilovic</maintainer>
   <license>BSD</license>
-  <url type="website">https://github.com/KCL-Planning/ROSPlan</url>
+  <url type="website">https://github.com/ah96/ROS2Plan</url>
+  <url type="repository">https://github.com/ah96/ROS2Plan</url>
+  <url type="bugtracker">https://github.com/ah96/ROS2Plan/issues</url>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 

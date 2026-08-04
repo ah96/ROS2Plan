@@ -25,7 +25,11 @@ namespace KCL_ros2plan {
         // Satellite node for blocking KB calls in setup() (executor not yet running).
         // The name is made unique per action interface so several action nodes running
         // concurrently do not share a node name (which produces rosout publisher clashes).
-        auto svc_node = std::make_shared<rclcpp::Node>(std::string(get_name()) + "_setup_svc");
+        // use_global_arguments(false) keeps that name: launch_ros passes the node name as a
+        // process-wide `-r __node:=` remap, which would otherwise rename this node as well.
+        auto svc_node = std::make_shared<rclcpp::Node>(
+            std::string(get_name()) + "_setup_svc",
+            rclcpp::NodeOptions().use_global_arguments(false));
 
         // fetch action params from KB
         std::string op_details_svc = "/" + kb + "/domain/operator_details";
@@ -109,7 +113,11 @@ namespace KCL_ros2plan {
 
         // KB update client — created on a persistent satellite node so update calls
         // inside dispatchCallback() can be spun without blocking the executor.
-        kb_svc_node_ = std::make_shared<rclcpp::Node>("rp_action_kb_svc_node");
+        // Unique per action interface, and immune to the process-wide `-r __node:=` remap
+        // launch_ros passes for the main node (see the setup satellite node above).
+        kb_svc_node_ = std::make_shared<rclcpp::Node>(
+            std::string(get_name()) + "_kb_svc",
+            rclcpp::NodeOptions().use_global_arguments(false));
         update_knowledge_client_ = kb_svc_node_->create_client<ros2plan_knowledge_msgs::srv::KnowledgeUpdateServiceArray>(
             "/" + kb + "/update_array");
 

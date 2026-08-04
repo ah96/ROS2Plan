@@ -1,10 +1,14 @@
 <?xml version="1.0"?>
 <package format="3">
   <name>ros2plan_dependencies</name>
-  <version>0.1.0</version>
+  <version>2.0.0</version>
   <description>The ros2plan_dependencies package</description>
-  <maintainer email="gcanal@iri.upc.edu">gerard</maintainer>
+  <maintainer email="amar.halilovic@uni-ulm.de">Amar Halilovic</maintainer>
+  <author email="gcanal@iri.upc.edu">gerard</author>
   <license>BSD</license>
+  <url type="website">https://github.com/ah96/ROS2Plan</url>
+  <url type="repository">https://github.com/ah96/ROS2Plan</url>
+  <url type="bugtracker">https://github.com/ah96/ROS2Plan/issues</url>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 

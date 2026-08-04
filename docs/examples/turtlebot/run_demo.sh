@@ -26,6 +26,11 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# Isolate from any other ROS 2 system on this machine: ROS2Plan nodes use fixed node names,
+# so a knowledge base belonging to another project on the default domain is indistinguishable
+# from this demo's own, and the demo would query the wrong one. Override if 77 is in use.
+export ROS_DOMAIN_ID="${ROS_DOMAIN_ID:-77}"
+
 PS=ros2plan_planning_system
 KB=ros2plan_knowledge_base
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -35,12 +40,26 @@ POPF="$SHARE/common/bin/popf"
 WORK="$(mktemp -d /tmp/ros2plan_demo.XXXXXX)"
 
 PIDS=()
-cleanup() { for p in "${PIDS[@]:-}"; do kill "$p" 2>/dev/null; done; }
+cleanup() {
+    # `ros2 run` spawns the node as a child process, so signalling only the PID from $!
+    # leaves the node itself running. Take the children too, then escalate to KILL for
+    # anything still alive -- a leaked knowledge base on a shared domain corrupts later runs.
+    for p in "${PIDS[@]:-}"; do
+        pkill -TERM -P "$p" 2>/dev/null
+        kill  -TERM "$p"    2>/dev/null
+    done
+    sleep 2
+    for p in "${PIDS[@]:-}"; do
+        pkill -KILL -P "$p" 2>/dev/null
+        kill  -KILL "$p"    2>/dev/null
+    done
+}
 trap cleanup EXIT
 
 echo "=== ROS2Plan Turtlebot Demo (${WPS} waypoints, robot: kenny) ==="
 echo "    domain : $DOMAIN"
 echo "    workdir: $WORK"
+echo "    ROS_DOMAIN_ID=$ROS_DOMAIN_ID  (export this to inspect the demo from another shell)"
 
 # ── Step 1: Knowledge base ───────────────────────────────────────────────────
 echo "[1/6] Starting the knowledge base..."

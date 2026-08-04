@@ -2,11 +2,10 @@ name: CI
 
 # Builds and tests ROS2Plan on ROS 2 Humble (Ubuntu 22.04).
 #
-# Two toolchains are exercised:
-#   * gcc11-default — the stock Ubuntu 22.04 compiler. Builds PDDL + HDDL + PPDDL
-#     (RDDL auto-disables because it needs GCC >= 12).
-#   * gcc12-full    — GCC 12, which additionally enables the RDDL knowledge base and parser,
-#     so the complete PDDL/HDDL/PPDDL/RDDL matrix is compiled and tested.
+# The full PDDL/HDDL/PPDDL/RDDL matrix builds on both toolchains; the two legs exist to
+# catch compiler-specific breakage, not to gate any feature:
+#   * gcc11 — the stock Ubuntu 22.04 compiler, i.e. what a plain `colcon build` uses.
+#   * gcc12 — the newer toolchain, to keep the sources warning- and error-clean there too.
 
 on:
   push:
@@ -24,10 +23,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: gcc11-default
+          - name: gcc11
             cc: gcc
             cxx: g++
-          - name: gcc12-full
+          - name: gcc12
             cc: gcc-12
             cxx: g++-12
     steps:
@@ -61,7 +60,14 @@ jobs:
         run: |
           source /opt/ros/humble/setup.bash
           source install/setup.bash
-          colcon test --event-handlers console_cohesion+ --return-code-on-test-failure
+          # The integration tests launch nodes under fixed names (ros2plan_knowledge_base and
+          # friends), so any other ROS 2 system reachable on the same domain is indistinguishable
+          # from the one under test and the tests query the wrong nodes. Run on a dedicated
+          # domain. Sequential for the same reason plus fixed service timeouts, which flake when
+          # packages' tests run concurrently on small runners.
+          export ROS_DOMAIN_ID=78
+          colcon test --executor sequential \
+            --event-handlers console_cohesion+ --return-code-on-test-failure
 
       - name: Test results (summary)
         if: always()

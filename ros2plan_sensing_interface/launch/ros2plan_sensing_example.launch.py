@@ -9,7 +9,7 @@ def generate_launch_description():
     pkg_si = FindPackageShare('ros2plan_sensing_interface')
 
     return LaunchDescription([
-        DeclareLaunchArgument('main_rate', default_value='10'),
+        DeclareLaunchArgument('main_rate', default_value='10.0'),
         DeclareLaunchArgument(
             'config_path',
             default_value=PathJoinSubstitution([pkg_si, 'example.yaml']),

@@ -10,6 +10,9 @@ node with the amazon (`driverlog-simple`) fixture, then runs the gtest executabl
 From the colcon workspace root:
 
 ```bash
+# The test launches a node named ros2plan_knowledge_base, so any other ROS 2 system on the
+# same domain is indistinguishable from it and the test queries the wrong one. Isolate:
+export ROS_DOMAIN_ID=78
 colcon build --packages-select ros2plan_knowledge_base
 colcon test  --packages-select ros2plan_knowledge_base
 colcon test-result --verbose

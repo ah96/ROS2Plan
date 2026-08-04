@@ -8,14 +8,14 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument('node_name', default_value='ros2plan_plan_dispatcher'),
         DeclareLaunchArgument('knowledge_base', default_value='ros2plan_knowledge_base'),
-        DeclareLaunchArgument(
-            'plan_topic',
-            default_value='/ros2plan_parsing_interface/complete_plan'),
+        # The parsing interface publishes under a relative name, which resolves to
+        # /complete_plan in the root namespace. Subscribe to the same relative name.
+        DeclareLaunchArgument('plan_topic', default_value='complete_plan'),
         DeclareLaunchArgument('action_dispatch_topic', default_value='action_dispatch'),
         DeclareLaunchArgument('action_feedback_topic', default_value='action_feedback'),
         DeclareLaunchArgument('display_edge_type', default_value='false'),
         DeclareLaunchArgument('timeout_actions', default_value='false'),
-        DeclareLaunchArgument('action_timeout_fraction', default_value='0'),
+        DeclareLaunchArgument('action_timeout_fraction', default_value='0.0'),
 
         Node(
             package='ros2plan_planning_system',

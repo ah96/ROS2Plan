@@ -4,9 +4,11 @@
   <version>2.0.0</version>
   <description>ROS2Plan rqt GUI plugins for visualising and interacting with a running ROS2Plan system</description>
 
-  <maintainer email="amarhalilovic96@gmail.com">ROS2Plan maintainers</maintainer>
+  <maintainer email="amar.halilovic@uni-ulm.de">Amar Halilovic</maintainer>
   <license>BSD</license>
-  <url type="website">https://github.com/KCL-Planning/ROSPlan</url>
+  <url type="website">https://github.com/ah96/ROS2Plan</url>
+  <url type="repository">https://github.com/ah96/ROS2Plan</url>
+  <url type="bugtracker">https://github.com/ah96/ROS2Plan/issues</url>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
   <buildtool_depend>ament_cmake_python</buildtool_depend>
@@ -21,6 +23,8 @@
   <depend>ament_index_python</depend>
 
   <exec_depend>python3-yaml</exec_depend>
+
+  <test_depend>ament_cmake_pytest</test_depend>
 
   <export>
     <build_type>ament_cmake</build_type>

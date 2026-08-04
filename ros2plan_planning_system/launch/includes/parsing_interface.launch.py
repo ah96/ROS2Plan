@@ -9,9 +9,9 @@ def generate_launch_description():
         DeclareLaunchArgument('node_name', default_value='ros2plan_parsing_interface'),
         DeclareLaunchArgument('knowledge_base', default_value='ros2plan_knowledge_base'),
         DeclareLaunchArgument('epsilon_time', default_value='0.01'),
-        DeclareLaunchArgument(
-            'planner_topic',
-            default_value='/ros2plan_planner_interface/planner_output'),
+        # The planner interface publishes under a relative name, which resolves to
+        # /planner_output in the root namespace. Subscribe to the same relative name.
+        DeclareLaunchArgument('planner_topic', default_value='planner_output'),
         DeclareLaunchArgument('plan_topic', default_value='complete_plan'),
 
         Node(
