@@ -16,7 +16,9 @@ namespace KCL_ros2plan {
 			for (VAL1_2::const_symbol_list::const_iterator symbolListIterator = c->begin();
 				symbolListIterator != c->end(); symbolListIterator++) {
 				const VAL1_2::const_symbol *object = *symbolListIterator;
-				instances[object->type->getName()].push_back(object->pddl_typed_symbol::getName());
+				// An untyped problem leaves type null; fall back to PDDL's implicit supertype.
+				const std::string type = (object->type != nullptr) ? object->type->getName() : "object";
+				instances[type].push_back(object->pddl_typed_symbol::getName());
 			}
 		}
 		return instances;

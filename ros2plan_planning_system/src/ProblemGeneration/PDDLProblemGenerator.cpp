@@ -55,7 +55,7 @@ namespace KCL_ros2plan {
         std::shared_ptr<ros2plan_knowledge_msgs::srv::GetDomainTypeService::Response> typeRes;
         CALL_SERVICE(get_types_client_, typeReq, typeRes, domain_type_service.c_str());
 
-        if (typeRes) {
+        if (typeRes && !typeRes->types.empty()) {
             for (size_t t = 0; t < typeRes->types.size(); t++) {
                 auto instReq = std::make_shared<ros2plan_knowledge_msgs::srv::GetInstanceService::Request>();
                 instReq->type_name = typeRes->types[t];
@@ -69,6 +69,22 @@ namespace KCL_ros2plan {
                     }
                     pFile << "- " << typeRes->types[t] << std::endl;
                 }
+            }
+        } else if (typeRes) {
+            // An untyped domain declares no types, so there is nothing to group the objects
+            // under. An empty type name fetches every instance at once; the names are written
+            // bare because a "- object" annotation is only legal under :typing.
+            auto instReq = std::make_shared<ros2plan_knowledge_msgs::srv::GetInstanceService::Request>();
+            instReq->type_name = "";
+            std::shared_ptr<ros2plan_knowledge_msgs::srv::GetInstanceService::Response> instRes;
+            CALL_SERVICE(get_instances_client_, instReq, instRes, state_instance_service.c_str());
+
+            if (instRes && !instRes->instances.empty()) {
+                pFile << "    ";
+                for (size_t i = 0; i < instRes->instances.size(); i++) {
+                    pFile << instRes->instances[i] << " ";
+                }
+                pFile << std::endl;
             }
         }
 

@@ -142,6 +142,16 @@ if(BUILD_TESTING)
     TARGET knowledge_base_launch_test
     ARGS "test_exe:=$<TARGET_FILE:knowledge_base_test>"
     TIMEOUT 120)
+
+  # Launch-test: regression cover for untyped PDDL, which used to segfault the node while it
+  # was parsing the problem file.
+  ament_add_gtest_executable(untyped_domain_test test/src/UntypedDomainTests.cpp)
+  ament_target_dependencies(untyped_domain_test
+    rclcpp std_srvs diagnostic_msgs ros2plan_knowledge_msgs)
+  add_launch_test(test/launch/untyped_domain_test.py
+    TARGET untyped_domain_launch_test
+    ARGS "test_exe:=$<TARGET_FILE:untyped_domain_test>"
+    TIMEOUT 120)
 endif()
 
 ament_package()

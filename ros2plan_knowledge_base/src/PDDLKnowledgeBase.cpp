@@ -144,7 +144,9 @@ namespace KCL_ros2plan {
         if (c) {
             for (auto it = c->begin(); it != c->end(); it++) {
                 const VAL1_2::const_symbol* object = *it;
-                domain_constants[object->type->getName()].push_back(
+                // An untyped domain leaves type null; fall back to PDDL's implicit supertype.
+                const std::string type = (object->type != nullptr) ? object->type->getName() : "object";
+                domain_constants[type].push_back(
                     object->pddl_typed_symbol::getName());
             }
         }

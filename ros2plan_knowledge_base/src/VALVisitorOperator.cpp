@@ -323,7 +323,7 @@ namespace KCL_ros2plan {
         for (VAL1_2::parameter_symbol_list::const_iterator vi = s->getArgs()->begin(); vi != s->getArgs()->end(); vi++) {
             diagnostic_msgs::msg::KeyValue param;
             param.key = (*vi)->pddl_typed_symbol::getName();
-            param.value = (*vi)->type->getName();
+            param.value = ((*vi)->type != nullptr) ? (*vi)->type->getName() : "object";
             last_func.typed_parameters.push_back(param);
         }
 
