@@ -131,14 +131,14 @@ install(DIRECTORY launch/
 
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
-  find_package(launch_testing_ament_cmake REQUIRED)
+  find_package(ros_testing REQUIRED)
 
   # Launch-test: brings up the knowledge base with the amazon (driverlog-simple) fixture
   # (installed by ros2plan_planning_system) and exercises its services.
   ament_add_gtest_executable(knowledge_base_test test/src/KnowledgeBaseTests.cpp)
   ament_target_dependencies(knowledge_base_test
     rclcpp std_srvs diagnostic_msgs ros2plan_knowledge_msgs)
-  add_launch_test(test/launch/knowledge_base_test.py
+  add_ros_test(test/launch/knowledge_base_test.py
     TARGET knowledge_base_launch_test
     ARGS "test_exe:=$<TARGET_FILE:knowledge_base_test>"
     TIMEOUT 120)
@@ -148,7 +148,7 @@ if(BUILD_TESTING)
   ament_add_gtest_executable(untyped_domain_test test/src/UntypedDomainTests.cpp)
   ament_target_dependencies(untyped_domain_test
     rclcpp std_srvs diagnostic_msgs ros2plan_knowledge_msgs)
-  add_launch_test(test/launch/untyped_domain_test.py
+  add_ros_test(test/launch/untyped_domain_test.py
     TARGET untyped_domain_launch_test
     ARGS "test_exe:=$<TARGET_FILE:untyped_domain_test>"
     TIMEOUT 120)
