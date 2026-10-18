@@ -52,6 +52,10 @@ namespace KCL_ros2plan {
     public:
 
         ProblemGenerator(const std::string& kb, rclcpp::Node::SharedPtr svc_node);
+        // Virtual: generators are owned through ProblemGeneratorPtr (a base-class unique_ptr), so
+        // without it a subclass's service clients were never destroyed, kept the ROS context
+        // alive past main(), and crashed the DDS threads at exit.
+        virtual ~ProblemGenerator() = default;
 
         virtual void generateProblemFile(std::string &problemPath);
     };
