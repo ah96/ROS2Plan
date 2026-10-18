@@ -5,8 +5,8 @@ from std_msgs.msg import String
 
 from ros2plan_rqt.xdot_qt import DotWidget
 
-from python_qt_binding import loadUi, QT_BINDING_VERSION
-from PyQt5.QtWidgets import QWidget, QFileDialog
+from python_qt_binding import loadUi
+from python_qt_binding.QtWidgets import QWidget, QFileDialog
 
 
 class EsterelPlanViewerWidget(QWidget):

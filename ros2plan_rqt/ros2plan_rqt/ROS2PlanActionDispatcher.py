@@ -8,7 +8,7 @@ from diagnostic_msgs.msg import KeyValue
 from ros2plan_dispatch_msgs.msg import ActionFeedback, ActionDispatch
 from ros2plan_knowledge_msgs.srv import GetDomainOperatorService, GetInstanceService
 
-from python_qt_binding import loadUi, QT_BINDING_VERSION
+from python_qt_binding import loadUi
 from python_qt_binding.QtCore import Qt, QTimer
 from python_qt_binding.QtWidgets import QHeaderView, QTreeWidgetItem, QListWidgetItem, QComboBox, QWidget
 from python_qt_binding.QtGui import QIcon

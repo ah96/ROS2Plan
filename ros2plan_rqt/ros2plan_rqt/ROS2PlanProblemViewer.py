@@ -5,7 +5,7 @@ from ament_index_python.packages import get_package_share_directory
 
 from std_msgs.msg import String
 
-from python_qt_binding import loadUi, QT_BINDING_VERSION
+from python_qt_binding import loadUi
 from python_qt_binding.QtCore import pyqtSignal
 from python_qt_binding.QtWidgets import QWidget
 
