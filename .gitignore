@@ -45,6 +45,8 @@ ros2plan_planning_system/common/plan*
 # Generated PDDL problem/solution files
 *.pddl.soln
 problem.pddl
+# ...but the test fixtures named problem.pddl are inputs, not generated output
+!ros2plan_planning_system/test/pddl/*/problem.pddl
 
 # Logs
 *.log
