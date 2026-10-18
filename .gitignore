@@ -45,13 +45,11 @@ ros2plan_planning_system/common/plan*
 # Generated PDDL problem/solution files
 *.pddl.soln
 problem.pddl
+# ...but the test fixtures named problem.pddl are inputs, not generated output
+!ros2plan_planning_system/test/pddl/*/problem.pddl
 
 # Logs
 *.log
-
-# Local editor/tool state (never published)
-/.claude-memory/
-/.claude/
 
 # Documentation and migration notes are kept locally, except the runnable turtlebot
 # example that README's quick start invokes. Git cannot re-include a path whose parent
