@@ -39,25 +39,10 @@ import colorsys
 import time
 import re
 
-from python_qt_binding import QT_BINDING_VERSION
-
-#from PySide.QtCore import *
-#from PySide.QtGui import *
-if QT_BINDING_VERSION.startswith('4'):
-    from PyQt4 import *
-    from PyQt4.QtCore import *
-    from PyQt4.QtGui import *
-elif QT_BINDING_VERSION.startswith('5'):
-    from PyQt5 import *
-    from PyQt5.QtCore import *
-    from PyQt5.QtGui import *
-    from python_qt_binding.QtWidgets import QWidget, QMainWindow
-else:
-    raise ValueError('Unsupported Qt version, supported versions: PyQt4, PyQt5')
-
-#from python_qt_binding import  *
-#from python_qt_binding.QtCore import  *
-#from python_qt_binding.QtGui import  *
+# ROS 2 Lyrical ships Qt 6 (PyQt6); python_qt_binding resolves these to the PyQt6 modules.
+from python_qt_binding.QtCore import *
+from python_qt_binding.QtGui import *
+from python_qt_binding.QtWidgets import *
 
 #--------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #-- Drawing Classes --#
@@ -72,7 +57,7 @@ class Pen:
         self.linewidth = 1.0
         self.fontsize = 14.0
         self.fontname = "Times-Roman"
-        self.dash = Qt.SolidLine
+        self.dash = Qt.PenStyle.SolidLine
 
     def copy(self):
         """Create a copy of this pen."""
@@ -124,15 +109,14 @@ class TextShape(Shape):
         font = QFont(self.pen.fontname)
 
         fontMetrics = QFontMetrics(QFont(self.pen.fontname))
-        scale = float(fontMetrics.width(self.t)) / float(self.w)
+        scale = float(fontMetrics.horizontalAdvance(self.t)) / float(self.w)
 
         if scale < 1.0 or scale > 1.0:
             font.setPointSizeF(font.pointSizeF()/scale);
 
         painter.setFont(font)#, self.pen.fontsize)) #AB simply setting font size doesn't work
         painter.drawText(
-                self.x - self.w / 2.0,
-                self.y,
+                QPointF(self.x - self.w / 2.0, self.y),
                 self.t)
         pass
 
@@ -155,8 +139,8 @@ class EllipseShape(Shape):
             painter.setBrush(QColor.fromRgbF(*pen.fillcolor))
         else:
             painter.setPen(QPen(QBrush(QColor.fromRgbF(*pen.color)), pen.linewidth, pen.dash))
-            painter.setBrush(Qt.NoBrush)
-        painter.drawEllipse(self.x0 - self.w, self.y0 - self.h,  self.w * 2,  self.h * 2)
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.drawEllipse(QRectF(self.x0 - self.w, self.y0 - self.h,  self.w * 2,  self.h * 2))
         painter.restore()
 
 class PolygonShape(Shape):
@@ -181,8 +165,8 @@ class PolygonShape(Shape):
             painter.setBrush(QColor.fromRgbF(*pen.fillcolor))
         else:
             painter.setPen(QPen(QBrush(QColor.fromRgbF(*pen.color)), pen.linewidth,
-                                            pen.dash, Qt.SquareCap, Qt.MiterJoin))
-            painter.setBrush(Qt.NoBrush)
+                                            pen.dash, Qt.PenCapStyle.SquareCap, Qt.PenJoinStyle.MiterJoin))
+            painter.setBrush(Qt.BrushStyle.NoBrush)
 
         painter.drawPolygon(polygon_points)
         painter.restore()
@@ -198,7 +182,7 @@ class LineShape(Shape):
     def draw(self, painter, highlight=False):
         pen = self.select_pen(highlight)
         painter.setPen(QPen(QBrush(QColor.fromRgbF(*pen.color)), pen.linewidth,
-                                            pen.dash, Qt.SquareCap, Qt.MiterJoin))
+                                            pen.dash, Qt.PenCapStyle.SquareCap, Qt.PenJoinStyle.MiterJoin))
 
         x0, y0 = self.points[0]
         for x1, y1 in self.points[1:]:
@@ -218,7 +202,7 @@ class BezierShape(Shape):
     def draw(self, painter, highlight=False):
         painter_path = QPainterPath()
         painter_path.moveTo(QPointF(*self.points[0]))
-        for i in xrange(1, len(self.points), 3):
+        for i in range(1, len(self.points), 3):
             painter_path.cubicTo(
                 QPointF(*self.points[i]),
                 QPointF(*self.points[i + 1]),
@@ -228,16 +212,16 @@ class BezierShape(Shape):
         if self.filled:
             brush = QBrush()
             brush.setColor(QColor.fromRgbF(*pen.fillcolor))
-            brush.setStyle(Qt.SolidPattern)
+            brush.setStyle(Qt.BrushStyle.SolidPattern)
             painter.setBrush(brush)
             #qpen.setCapStyle(Qt.RoundCap)
             #qpen.setJoinStyle(Qt.RoundJoin)
             #painter_path.setFillRule(Qt.OddEvenFill)
         else:
-            painter.setBrush(Qt.NoBrush)
+            painter.setBrush(Qt.BrushStyle.NoBrush)
 
         qpen.setStyle(pen.dash)
-        qpen.setWidth(pen.linewidth)
+        qpen.setWidthF(pen.linewidth)
         qpen.setColor(QColor.fromRgbF(*pen.color))
         painter.setPen(qpen)
         painter.drawPath(painter_path)
@@ -416,7 +400,7 @@ class XDotAttrParser:
         self.pen = Pen()
         self.shapes = []
 
-    def __nonzero__(self):
+    def __bool__(self):
         return self.pos < len(self.buf)
 
     def unescape(self, buf):
@@ -592,10 +576,10 @@ class XDotAttrParser:
     def handle_linestyle(self, style):
         if style == "solid":
 #            self.pen.dash = ()
-            self.pen.dash = Qt.SolidLine
+            self.pen.dash = Qt.PenStyle.SolidLine
         elif style == "dashed":
 #            self.pen.dash = (6, )       # 6pt on, 6pt off
-            self.pen.dash = Qt.DashLine
+            self.pen.dash = Qt.PenStyle.DashLine
 
     def handle_font(self, size, name):
         self.pen.fontsize = size
@@ -1108,7 +1092,7 @@ class XDotParser(DotParser):
         DotParser.parse(self)
 
         """
-        for k,shapes in self.subgraph_shapes.iteritems():
+        for k,shapes in self.subgraph_shapes.items():
           self.shapes += shapes
         """
 
@@ -1241,20 +1225,20 @@ class DragAction(object):
 
     def on_button_press(self, event):
 #        self.startmousex = self.prevmousex = event.x
-        self.startmousex = self.prevmousex = event.x()
-        self.startmousey = self.prevmousey = event.y()
+        self.startmousex = self.prevmousex = event.position().x()
+        self.startmousey = self.prevmousey = event.position().y()
         self.start()
 
     def on_motion_notify(self, event):
-        deltax = self.prevmousex - event.x()
-        deltay = self.prevmousey - event.y()
+        deltax = self.prevmousex - event.position().x()
+        deltay = self.prevmousey - event.position().y()
         self.drag(deltax, deltay)
-        self.prevmousex = event.x()
-        self.prevmousey = event.y()
+        self.prevmousex = event.position().x()
+        self.prevmousey = event.position().y()
 
     def on_button_release(self, event):
-        self.stopmousex = event.x()
-        self.stopmousey = event.y()
+        self.stopmousex = event.position().x()
+        self.stopmousey = event.position().y()
         self.stop()
 
     def draw(self, cr):
@@ -1276,24 +1260,24 @@ class DragAction(object):
 class NullAction(DragAction):
 
     def on_motion_notify(self, event):
-        x, y = event.x(), event.y()
+        x, y = event.position().x(), event.position().y()
 
         dot_widget = self.dot_widget
         item = dot_widget.get_url(x, y)
         if item is None:
             item = dot_widget.get_jump(x, y)
         if item is not None:
-            dot_widget.setCursor(Qt.PointingHandCursor)
+            dot_widget.setCursor(Qt.CursorShape.PointingHandCursor)
             dot_widget.set_highlight(item.highlight)
         else:
-            dot_widget.setCursor(Qt.ArrowCursor)
+            dot_widget.setCursor(Qt.CursorShape.ArrowCursor)
             dot_widget.set_highlight(None)
 
 
 class PanAction(DragAction):
 
     def start(self):
-        self.dot_widget.setCursor(Qt.ClosedHandCursor)
+        self.dot_widget.setCursor(Qt.CursorShape.ClosedHandCursor)
 
     def drag(self, deltax, deltay):
         self.dot_widget.x += deltax / self.dot_widget.zoom_ratio
@@ -1301,7 +1285,7 @@ class PanAction(DragAction):
         self.dot_widget.update()
 
     def stop(self):
-        self.dot_widget.cursor().setShape(Qt.ArrowCursor)
+        self.dot_widget.cursor().setShape(Qt.CursorShape.ArrowCursor)
 
     abort = stop
 
@@ -1359,11 +1343,6 @@ class DotWidget(QWidget):
     def __init__(self,  parent=None):
         super(DotWidget,  self).__init__(parent)
 
-        # qt version flag
-        self.qt4_version = False
-        if QT_BINDING_VERSION.startswith('4'):
-            self.qt4_version = True
-
         self.graph = Graph()
         self.openfilename = None
 
@@ -1405,8 +1384,7 @@ class DotWidget(QWidget):
         self.filter = filter
 
     def set_dotcode(self, dotcode, filename='<stdin>',center=True):
-        if isinstance(dotcode, unicode):
-            dotcode = dotcode.encode('utf8')
+        # dotcode stays str: the pipe below is in text mode (universal_newlines=True)
         p = subprocess.Popen(
             [self.filter, '-Txdot'],
             stdin=subprocess.PIPE,
@@ -1469,9 +1447,8 @@ class DotWidget(QWidget):
 #    def do_expose_event(self, event):
 #        cr = self.window.cairo_create()
         painter = QPainter (self)
-        painter.setRenderHint(QPainter.Antialiasing)
-        painter.setRenderHint(QPainter.TextAntialiasing)
-        painter.setRenderHint(QPainter.HighQualityAntialiasing)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setRenderHint(QPainter.RenderHint.TextAntialiasing)
 
         # set a clip region for the expose event
 #        cr.rectangle(
@@ -1485,7 +1462,7 @@ class DotWidget(QWidget):
 
         painter.setClipping(True)
         painter.setClipRect(self.rect())
-        painter.setBackground(QBrush(Qt.blue,Qt.SolidPattern))
+        painter.setBackground(QBrush(Qt.GlobalColor.blue,Qt.BrushStyle.SolidPattern))
         painter.save()
 
 #        rect = self.get_allocation()
@@ -1586,39 +1563,39 @@ class DotWidget(QWidget):
     def keyPressEvent(self, event):
         self.animation.stop()
         self.drag_action.abort()
-        if event.key() == Qt.Key_Left:
+        if event.key() == Qt.Key.Key_Left:
             self.x -= self.POS_INCREMENT/self.zoom_ratio
             self.update()
-        elif event.key() == Qt.Key_Right:
+        elif event.key() == Qt.Key.Key_Right:
             self.x += self.POS_INCREMENT/self.zoom_ratio
             self.update()
-        elif event.key() == Qt.Key_Up:
+        elif event.key() == Qt.Key.Key_Up:
             self.y -= self.POS_INCREMENT/self.zoom_ratio
             self.update()
-        elif event.key() == Qt.Key_Down:
+        elif event.key() == Qt.Key.Key_Down:
             self.y += self.POS_INCREMENT/self.zoom_ratio
             self.update()
-        elif event.key() == Qt.Key_PageUp:
+        elif event.key() == Qt.Key.Key_PageUp:
             self.zoom_image(self.zoom_ratio * self.ZOOM_INCREMENT)
             self.update()
-        elif event.key() == Qt.Key_PageDown:
+        elif event.key() == Qt.Key.Key_PageDown:
             self.zoom_image(self.zoom_ratio / self.ZOOM_INCREMENT)
             self.update()
-        elif event.key() == Qt.Key_PageUp:
+        elif event.key() == Qt.Key.Key_PageUp:
             self.drag_action.abort()
             self.drag_action = NullAction(self)
-        elif event.key() == Qt.Key_R:
+        elif event.key() == Qt.Key.Key_R:
             self.reload()
-        elif event.key() == Qt.Key_F:
+        elif event.key() == Qt.Key.Key_F:
             self.zoom_to_fit()
         event.accept()
 
     def get_drag_action(self, event):
         modifiers = event.modifiers()
-        if event.button() in (Qt.LeftButton, Qt.MidButton):
-            if modifiers & Qt.ControlModifier:
+        if event.button() in (Qt.MouseButton.LeftButton, Qt.MouseButton.MiddleButton):
+            if modifiers & Qt.KeyboardModifier.ControlModifier:
                 return ZoomAction
-            elif modifiers & Qt.ShiftModifier:
+            elif modifiers & Qt.KeyboardModifier.ShiftModifier:
                 return ZoomAreaAction
             else:
                 return PanAction
@@ -1636,8 +1613,8 @@ class DotWidget(QWidget):
         self.drag_action.on_button_press(event)
 
         self.presstime = time.time()
-        self.pressx = event.x()
-        self.pressy = event.y()
+        self.pressx = event.position().x()
+        self.pressy = event.position().y()
         event.accept()
 
     def is_click(self, event, click_fuzz=4, click_timeout=1.0):
@@ -1646,16 +1623,16 @@ class DotWidget(QWidget):
             return False
         # XXX instead of doing this complicated logic, shouldn't we listen
         # for gtk's clicked event instead?
-        deltax = self.pressx - event.x()
-        deltay = self.pressy - event.y()
+        deltax = self.pressx - event.position().x()
+        deltay = self.pressy - event.position().y()
         return (time.time() < self.presstime + click_timeout
                 and math.hypot(deltax, deltay) < click_fuzz)
 
     def mouseReleaseEvent(self, event):
         self.drag_action.on_button_release(event)
         self.drag_action = NullAction(self)
-        if event.button() == Qt.LeftButton and self.is_click(event):
-            x, y = event.x(), event.y()
+        if event.button() == Qt.MouseButton.LeftButton and self.is_click(event):
+            x, y = event.position().x(), event.position().y()
             url = self.get_url(x, y)
             if url is None:
                 jump = self.get_jump(x, y)
@@ -1664,15 +1641,15 @@ class DotWidget(QWidget):
 
             event.accept()
             return
-        if event.button() == Qt.RightButton and self.is_click(event):
-            x, y = event.x(), event.y()
+        if event.button() == Qt.MouseButton.RightButton and self.is_click(event):
+            x, y = event.position().x(), event.position().y()
             url = self.get_url(x, y)
             if url is None:
                 jump = self.get_jump(x, y)
                 if jump is not None:
                     self.animate_to(jump.x, jump.y)
 
-        if event.button() in (Qt.LeftButton, Qt.MidButton):
+        if event.button() in (Qt.MouseButton.LeftButton, Qt.MouseButton.MiddleButton):
             event.accept()
         return
 
@@ -1680,22 +1657,12 @@ class DotWidget(QWidget):
         return False
 
     def wheelEvent(self, event):
-        if self.qt4_version:
-            # PyQt4
-            if event.delta() > 0:
-                self.zoom_image(self.zoom_ratio * self.ZOOM_INCREMENT,
-                            pos=(event.x(), event.y()))
-            if event.delta() < 0:
-                self.zoom_image(self.zoom_ratio / self.ZOOM_INCREMENT,
-                            pos=(event.x(), event.y()))
-        else:
-            # PyQt5
-            if event.angleDelta().y() > 0:
-                self.zoom_image(self.zoom_ratio * self.ZOOM_INCREMENT,
-                            pos=(event.x(), event.y()))
-            if event.angleDelta().y() < 0:
-                self.zoom_image(self.zoom_ratio / self.ZOOM_INCREMENT,
-                            pos=(event.x(), event.y()))
+        if event.angleDelta().y() > 0:
+            self.zoom_image(self.zoom_ratio * self.ZOOM_INCREMENT,
+                        pos=(event.position().x(), event.position().y()))
+        if event.angleDelta().y() < 0:
+            self.zoom_image(self.zoom_ratio / self.ZOOM_INCREMENT,
+                        pos=(event.position().x(), event.position().y()))
 
     def mouseMoveEvent(self, event):
         self.drag_action.on_motion_notify(event)
@@ -1740,23 +1707,23 @@ class DotWindow(QMainWindow):
         self.graph = Graph()
         self.setWindowTitle(QApplication.applicationName())
         self.widget = DotWidget()
-        self.widget.setContextMenuPolicy(Qt.ActionsContextMenu)
+        self.widget.setContextMenuPolicy(Qt.ContextMenuPolicy.ActionsContextMenu)
         self.setCentralWidget(self.widget)
 
         palette = QPalette ()
-        palette.setColor(QPalette.Background, Qt.white)
+        palette.setColor(QPalette.ColorRole.Window, Qt.GlobalColor.white)
         self.setPalette(palette)
 
         self.filename = None
 
         file_open_action = self.create_action("&Open...", self.on_open,
-                QKeySequence.Open, "fileopen", "Open an existing dot file")
+                QKeySequence.StandardKey.Open, "fileopen", "Open an existing dot file")
         file_reload_action = self.create_action("&Refresh", self.on_reload,
-                QKeySequence.Refresh, "view-refresh", "Reload opened dot file")
+                QKeySequence.StandardKey.Refresh, "view-refresh", "Reload opened dot file")
         zoom_in_action = self.create_action("Zoom In", self.widget.on_zoom_in,
-                QKeySequence.ZoomIn, "zoom-in", "Zoom in")
+                QKeySequence.StandardKey.ZoomIn, "zoom-in", "Zoom in")
         zoom_out_action = self.create_action("Zoom Out", self.widget.on_zoom_out,
-                QKeySequence.ZoomIn, "zoom-out", "Zoom Out")
+                QKeySequence.StandardKey.ZoomIn, "zoom-out", "Zoom Out")
         zoom_fit_action = self.create_action("Zoom Fit", self.widget.on_zoom_fit,
                 None, "zoom-fit-best", "Zoom Fit")
         zoom_100_action = self.create_action("Zoom 100%", self.widget.on_zoom_100,
@@ -1939,7 +1906,7 @@ def main():
             win.open_file(args[0])
 #            gobject.timeout_add(1000, win.update_file, args[0])
 #    gtk.main()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 

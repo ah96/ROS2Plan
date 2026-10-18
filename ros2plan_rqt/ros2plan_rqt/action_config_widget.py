@@ -3,16 +3,9 @@ from ament_index_python.packages import get_package_share_directory
 import yaml
 from os.path import expanduser
 
-from python_qt_binding import loadUi, QT_BINDING_VERSION
+from python_qt_binding import loadUi
 from python_qt_binding.QtGui import QStandardItem, QStandardItemModel, QPixmap
-from python_qt_binding.QtWidgets import QMainWindow, QAbstractItemView
-
-if QT_BINDING_VERSION.startswith('4'):
-    from PyQt4.QtGui import QFileDialog
-elif QT_BINDING_VERSION.startswith('5'):
-    from PyQt5.QtWidgets import QFileDialog
-else:
-    raise ValueError('Unsupported Qt version, supported versions: PyQt4, PyQt5')
+from python_qt_binding.QtWidgets import QMainWindow, QAbstractItemView, QFileDialog
 
 
 #Popup window for actionlib param settings
@@ -149,7 +142,7 @@ class ActionConfigWidget(QMainWindow):
         self.model_overview = QStandardItemModel()
         self.treeView_overview.setModel(self.model_overview)
         self.treeView_overview.model().setHorizontalHeaderLabels(['Action', 'Interface Type', 'id'])
-        self.treeView_overview.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.treeView_overview.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.treeView_overview.setColumnWidth(0,50)
         self.treeView_overview.setColumnWidth(1,350)
         self.treeView_overview.setColumnWidth(2,10)
@@ -159,7 +152,7 @@ class ActionConfigWidget(QMainWindow):
         # tableview -> newAction_actionlib
         self.tableView_model_newAction_actionlib = QStandardItemModel()
         self.tableView_newAction_actionlib_paramValues.setModel(self.tableView_model_newAction_actionlib)
-        self.tableView_newAction_actionlib_paramValues.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.tableView_newAction_actionlib_paramValues.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.tableView_newAction_actionlib_paramValues.verticalHeader().setVisible(False)
         self.tableView_newAction_actionlib_paramValues.horizontalHeader().setVisible(False)
         self.tableView_newAction_actionlib_paramValues.horizontalHeader().setStretchLastSection(True)
@@ -167,7 +160,7 @@ class ActionConfigWidget(QMainWindow):
         # tableview -> newAction_service
         self.tableView_model_newAction_service = QStandardItemModel()
         self.tableView_newAction_service_paramValues.setModel(self.tableView_model_newAction_service)
-        self.tableView_newAction_service_paramValues.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.tableView_newAction_service_paramValues.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.tableView_newAction_service_paramValues.verticalHeader().setVisible(False)
         self.tableView_newAction_service_paramValues.horizontalHeader().setVisible(False)
         self.tableView_newAction_service_paramValues.horizontalHeader().setStretchLastSection(True)
@@ -175,7 +168,7 @@ class ActionConfigWidget(QMainWindow):
         # tableview -> addState_actionlib
         self.tableView_model_addState_actionlib = QStandardItemModel()
         self.tableView_addState_actionlib_paramValues.setModel(self.tableView_model_addState_actionlib)
-        self.tableView_addState_actionlib_paramValues.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.tableView_addState_actionlib_paramValues.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.tableView_addState_actionlib_paramValues.verticalHeader().setVisible(False)
         self.tableView_addState_actionlib_paramValues.horizontalHeader().setVisible(False)
         self.tableView_addState_actionlib_paramValues.horizontalHeader().setStretchLastSection(True)
@@ -183,7 +176,7 @@ class ActionConfigWidget(QMainWindow):
         #tableview -> addState_service
         self.tableView_model_addState_service = QStandardItemModel()
         self.tableView_addState_service_paramValues.setModel(self.tableView_model_addState_service)
-        self.tableView_addState_service_paramValues.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.tableView_addState_service_paramValues.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.tableView_addState_service_paramValues.verticalHeader().setVisible(False)
         self.tableView_addState_service_paramValues.horizontalHeader().setVisible(False)
         self.tableView_addState_service_paramValues.horizontalHeader().setStretchLastSection(True)

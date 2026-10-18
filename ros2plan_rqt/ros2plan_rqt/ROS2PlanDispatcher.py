@@ -14,7 +14,7 @@ from ros2plan_knowledge_msgs.srv import (
 )
 from ros2plan_knowledge_msgs.msg import KnowledgeItem
 
-from python_qt_binding import loadUi, QT_BINDING_VERSION
+from python_qt_binding import loadUi
 from python_qt_binding.QtCore import Qt, QTimer
 from python_qt_binding.QtWidgets import QHeaderView, QTreeWidgetItem, QListWidgetItem, QWidget
 from python_qt_binding.QtGui import QIcon
@@ -102,9 +102,9 @@ class PlanViewWidget(QWidget):
         self.factNameComboBox.currentIndexChanged[int].connect(self._handle_fact_name_changed)
 
         self._plugin = plugin
-        self.planView.sortByColumn(0, Qt.AscendingOrder)
+        self.planView.sortByColumn(0, Qt.SortOrder.AscendingOrder)
         header = self.planView.header()
-        header.setSectionResizeMode(QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
 
         self._column_index = {}
         for column_name in self._column_names:
