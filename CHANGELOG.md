@@ -31,6 +31,12 @@ packages stay C++17.
   `unicode`, `xrange`, `dict.iteritems()` and `__nonzero__`.
 - **`.gitignore` excluded every `problem.pddl`**, including test fixtures under
   `ros2plan_planning_system/test/pddl/`. Fixtures are now exempt.
+- **Missing `problem.pddl` test fixtures.** `amazon/problem.pddl` and `untyped/problem.pddl`
+  had never been committed because of the rule above, so the knowledge base and problem
+  interface launch tests failed on any fresh checkout. Both are now in the repository.
+- **Launch tests interfered when run in parallel.** They now register through `add_ros_test`
+  (from `ros_testing`), which gives each test its own `ROS_DOMAIN_ID`. Before, a plain
+  `colcon test` let the two packages' tests reach each other's knowledge base.
 
 ## [2.0.0] — 2026-08-04
 
