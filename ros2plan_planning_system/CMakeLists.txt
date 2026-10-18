@@ -1,9 +1,9 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.10)
 project(ros2plan_planning_system)
 
-# Default to C++17
+# Default to C++20 (what ROS 2 Lyrical requires)
 if(NOT CMAKE_CXX_STANDARD)
-  set(CMAKE_CXX_STANDARD 17)
+  set(CMAKE_CXX_STANDARD 20)
 endif()
 
 add_compile_options(-Wno-deprecated-declarations)
@@ -29,6 +29,24 @@ set(DEPS
   ros2plan_dependencies
 )
 
+# ament_target_dependencies() was removed in ROS 2 Lyrical: link the CMake targets directly.
+# ros2plan_dependencies exports plain libraries/include dirs rather than targets.
+set(DEP_TARGETS
+  rclcpp::rclcpp
+  rclcpp_action::rclcpp_action
+  ${std_msgs_TARGETS}
+  ${std_srvs_TARGETS}
+  ${diagnostic_msgs_TARGETS}
+  ${ros2plan_dispatch_msgs_TARGETS}
+  ${ros2plan_knowledge_msgs_TARGETS}
+  ${ros2plan_dependencies_LIBRARIES}
+)
+
+function(ros2plan_target_deps target)
+  target_link_libraries(${target} ${DEP_TARGETS})
+  target_include_directories(${target} PUBLIC ${ros2plan_dependencies_INCLUDE_DIRS})
+endfunction()
+
 include_directories(include)
 
 ###########
@@ -39,7 +57,7 @@ include_directories(include)
 add_library(ros2plan_action_interface
   src/ActionInterface/RPActionInterface.cpp
 )
-ament_target_dependencies(ros2plan_action_interface ${DEPS})
+ros2plan_target_deps(ros2plan_action_interface)
 target_include_directories(ros2plan_action_interface PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
@@ -56,125 +74,125 @@ add_executable(problemInterface
   src/ProblemGeneration/CHIMPProblemGenerator.cpp
   src/ProblemGeneration/ProblemGeneratorFactory.cpp
 )
-ament_target_dependencies(problemInterface ${DEPS})
+ros2plan_target_deps(problemInterface)
 
 ## Planner interface executables
 add_executable(popf_planner_interface
   src/PlannerInterface/POPFPlannerInterface.cpp
   src/PlannerInterface/PlannerInterface.cpp
 )
-ament_target_dependencies(popf_planner_interface ${DEPS})
+ros2plan_target_deps(popf_planner_interface)
 
 add_executable(panda_planner_interface
   src/PlannerInterface/PANDAPlannerInterface.cpp
   src/PlannerInterface/PlannerInterface.cpp
 )
-ament_target_dependencies(panda_planner_interface ${DEPS})
+ros2plan_target_deps(panda_planner_interface)
 
 add_executable(ff_planner_interface
   src/PlannerInterface/FFPlannerInterface.cpp
   src/PlannerInterface/PlannerInterface.cpp
 )
-ament_target_dependencies(ff_planner_interface ${DEPS})
+ros2plan_target_deps(ff_planner_interface)
 
 add_executable(metricff_planner_interface
   src/PlannerInterface/FFPlannerInterface.cpp
   src/PlannerInterface/PlannerInterface.cpp
 )
-ament_target_dependencies(metricff_planner_interface ${DEPS})
+ros2plan_target_deps(metricff_planner_interface)
 
 add_executable(rddlsim_planner_interface
   src/PlannerInterface/RDDLSIMPlannerInterface.cpp
   src/PlannerInterface/PlannerInterface.cpp
 )
-ament_target_dependencies(rddlsim_planner_interface ${DEPS})
+ros2plan_target_deps(rddlsim_planner_interface)
 
 add_executable(smt_planner_interface
   src/PlannerInterface/SMTPlannerInterface.cpp
   src/PlannerInterface/PlannerInterface.cpp
 )
-ament_target_dependencies(smt_planner_interface ${DEPS})
+ros2plan_target_deps(smt_planner_interface)
 
 add_executable(fd_planner_interface
   src/PlannerInterface/FDPlannerInterface.cpp
   src/PlannerInterface/PlannerInterface.cpp
 )
-ament_target_dependencies(fd_planner_interface ${DEPS})
+ros2plan_target_deps(fd_planner_interface)
 
 add_executable(tfd_planner_interface
   src/PlannerInterface/TFDPlannerInterface.cpp
   src/PlannerInterface/PlannerInterface.cpp
 )
-ament_target_dependencies(tfd_planner_interface ${DEPS})
+ros2plan_target_deps(tfd_planner_interface)
 
 add_executable(lpg_planner_interface
   src/PlannerInterface/LPGPlannerInterface.cpp
   src/PlannerInterface/PlannerInterface.cpp
 )
-ament_target_dependencies(lpg_planner_interface ${DEPS})
+ros2plan_target_deps(lpg_planner_interface)
 
 add_executable(upm_planner_interface
   src/PlannerInterface/UPMPlannerInterface.cpp
   src/PlannerInterface/PlannerInterface.cpp
 )
-ament_target_dependencies(upm_planner_interface ${DEPS})
+ros2plan_target_deps(upm_planner_interface)
 
 add_executable(pprp_planner_interface
   src/PlannerInterface/PPRPPlannerInterface.cpp
   src/PlannerInterface/PlannerInterface.cpp
 )
-ament_target_dependencies(pprp_planner_interface ${DEPS})
+ros2plan_target_deps(pprp_planner_interface)
 
 add_executable(chimp_planner_interface
   src/PlannerInterface/CHIMPPlannerInterface.cpp
   src/PlannerInterface/PlannerInterface.cpp
 )
-ament_target_dependencies(chimp_planner_interface ${DEPS})
+ros2plan_target_deps(chimp_planner_interface)
 
 add_executable(online_planner_interface
   src/PlannerInterface/OnlinePlannerInterface.cpp
   src/PlannerInterface/PlannerInterface.cpp
 )
-ament_target_dependencies(online_planner_interface ${DEPS})
+ros2plan_target_deps(online_planner_interface)
 
 ## Plan parsers
 add_executable(pddl_simple_plan_parser
   src/PlanParsing/PDDLSimplePlanParser.cpp
   src/PlanParsing/PlanParser.cpp
 )
-ament_target_dependencies(pddl_simple_plan_parser ${DEPS})
+ros2plan_target_deps(pddl_simple_plan_parser)
 
 add_executable(pddl_esterel_plan_parser
   src/PlanParsing/PDDLEsterelPlanParser.cpp
   src/PlanParsing/PlanParser.cpp
 )
-ament_target_dependencies(pddl_esterel_plan_parser ${DEPS})
+ros2plan_target_deps(pddl_esterel_plan_parser)
 
 ## Plan dispatchers
 add_executable(pddl_simple_plan_dispatcher
   src/PlanDispatch/SimplePlanDispatcher.cpp
   src/PlanDispatch/PlanDispatcher.cpp
 )
-ament_target_dependencies(pddl_simple_plan_dispatcher ${DEPS})
+ros2plan_target_deps(pddl_simple_plan_dispatcher)
 
 add_executable(pddl_esterel_plan_dispatcher
   src/PlanDispatch/EsterelPlanDispatcher.cpp
   src/PlanDispatch/PlanDispatcher.cpp
 )
-ament_target_dependencies(pddl_esterel_plan_dispatcher ${DEPS})
+ros2plan_target_deps(pddl_esterel_plan_dispatcher)
 
 add_executable(online_plan_dispatcher
   src/PlanDispatch/OnlinePlanDispatcher.cpp
   src/PlanDispatch/PlanDispatcher.cpp
 )
-ament_target_dependencies(online_plan_dispatcher ${DEPS})
+ros2plan_target_deps(online_plan_dispatcher)
 
 ## Simulated action
 add_executable(simulatedAction
   src/ActionInterface/RPSimulatedActionInterface.cpp
   src/ActionInterface/RPActionInterface.cpp
 )
-ament_target_dependencies(simulatedAction ${DEPS})
+ros2plan_target_deps(simulatedAction)
 
 #############
 ## Install ##
@@ -251,8 +269,8 @@ if(BUILD_TESTING)
   # ---- Integration tests (gtest executable driven by a launch_testing harness) ----
   # Problem interface
   ament_add_gtest_executable(problem_interface_test test/src/ProblemInterfaceTests.cpp)
-  ament_target_dependencies(problem_interface_test
-    rclcpp std_msgs ros2plan_dispatch_msgs ament_index_cpp)
+  target_link_libraries(problem_interface_test
+    rclcpp::rclcpp ${std_msgs_TARGETS} ${ros2plan_dispatch_msgs_TARGETS} ament_index_cpp::ament_index_cpp)
   add_launch_test(test/launch/problem_interface_test.py
     TARGET problem_interface_launch_test
     ARGS "test_exe:=$<TARGET_FILE:problem_interface_test>"
@@ -260,8 +278,8 @@ if(BUILD_TESTING)
 
   # Parsing interface
   ament_add_gtest_executable(parsing_interface_test test/src/ParsingInterfaceTests.cpp)
-  ament_target_dependencies(parsing_interface_test
-    rclcpp std_srvs ros2plan_dispatch_msgs ament_index_cpp)
+  target_link_libraries(parsing_interface_test
+    rclcpp::rclcpp ${std_srvs_TARGETS} ${ros2plan_dispatch_msgs_TARGETS} ament_index_cpp::ament_index_cpp)
   add_launch_test(test/launch/parsing_interface_test.py
     TARGET parsing_interface_launch_test
     ARGS "test_exe:=$<TARGET_FILE:parsing_interface_test>"
@@ -269,8 +287,8 @@ if(BUILD_TESTING)
 
   # Planner interface (POPF — full KB -> problem -> plan chain)
   ament_add_gtest_executable(planner_interface_test test/src/PlannerInterfaceTests.cpp)
-  ament_target_dependencies(planner_interface_test
-    rclcpp std_msgs ros2plan_dispatch_msgs ament_index_cpp)
+  target_link_libraries(planner_interface_test
+    rclcpp::rclcpp ${std_msgs_TARGETS} ${ros2plan_dispatch_msgs_TARGETS} ament_index_cpp::ament_index_cpp)
   add_launch_test(test/launch/planner_interface_test.py
     TARGET planner_interface_launch_test
     ARGS "test_exe:=$<TARGET_FILE:planner_interface_test>"
@@ -278,8 +296,8 @@ if(BUILD_TESTING)
 
   # Plan dispatch (full KB -> problem -> plan -> parse -> dispatch chain)
   ament_add_gtest_executable(plan_dispatch_test test/src/PlanDispatchTests.cpp)
-  ament_target_dependencies(plan_dispatch_test
-    rclcpp std_msgs std_srvs ros2plan_dispatch_msgs)
+  target_link_libraries(plan_dispatch_test
+    rclcpp::rclcpp ${std_msgs_TARGETS} ${std_srvs_TARGETS} ${ros2plan_dispatch_msgs_TARGETS})
   add_launch_test(test/launch/plan_dispatch_test.py
     TARGET plan_dispatch_launch_test
     ARGS "test_exe:=$<TARGET_FILE:plan_dispatch_test>"
@@ -294,8 +312,8 @@ if(BUILD_TESTING)
   # CHIMP planner interface — only when the (Java) CHIMP planner is built.
   if(ROS2PLAN_COMPILE_CHIMP)
     ament_add_gtest_executable(chimp_planner_interface_test test/src/ChimpPlannerInterfaceTests.cpp)
-    ament_target_dependencies(chimp_planner_interface_test
-      rclcpp std_msgs ros2plan_dispatch_msgs ament_index_cpp)
+    target_link_libraries(chimp_planner_interface_test
+      rclcpp::rclcpp ${std_msgs_TARGETS} ${ros2plan_dispatch_msgs_TARGETS} ament_index_cpp::ament_index_cpp)
     add_launch_test(test/launch/chimp_planner_interface_test.py
       TARGET chimp_planner_interface_launch_test
       ARGS "test_exe:=$<TARGET_FILE:chimp_planner_interface_test>"

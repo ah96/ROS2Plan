@@ -1,7 +1,7 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.10)
 project(ros2plan_knowledge_base)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(ament_cmake REQUIRED)
@@ -76,17 +76,17 @@ target_compile_options(knowledgeBase PRIVATE
     -Wno-register
 )
 
-ament_target_dependencies(knowledgeBase
-    rclcpp
-    std_msgs
-    std_srvs
-    diagnostic_msgs
-    geometry_msgs
-    nav_msgs
-    visualization_msgs
-    tf2
-    tf2_ros
-    ros2plan_knowledge_msgs
+target_link_libraries(knowledgeBase
+    rclcpp::rclcpp
+    ${std_msgs_TARGETS}
+    ${std_srvs_TARGETS}
+    ${diagnostic_msgs_TARGETS}
+    ${geometry_msgs_TARGETS}
+    ${nav_msgs_TARGETS}
+    ${visualization_msgs_TARGETS}
+    tf2::tf2
+    tf2_ros::tf2_ros
+    ${ros2plan_knowledge_msgs_TARGETS}
 )
 
 # Link against hddl_parser and ippc_server (not val_kcl — we compile VAL inline)
@@ -136,8 +136,8 @@ if(BUILD_TESTING)
   # Launch-test: brings up the knowledge base with the amazon (driverlog-simple) fixture
   # (installed by ros2plan_planning_system) and exercises its services.
   ament_add_gtest_executable(knowledge_base_test test/src/KnowledgeBaseTests.cpp)
-  ament_target_dependencies(knowledge_base_test
-    rclcpp std_srvs diagnostic_msgs ros2plan_knowledge_msgs)
+  target_link_libraries(knowledge_base_test
+    rclcpp::rclcpp ${std_srvs_TARGETS} ${diagnostic_msgs_TARGETS} ${ros2plan_knowledge_msgs_TARGETS})
   add_launch_test(test/launch/knowledge_base_test.py
     TARGET knowledge_base_launch_test
     ARGS "test_exe:=$<TARGET_FILE:knowledge_base_test>"
@@ -146,8 +146,8 @@ if(BUILD_TESTING)
   # Launch-test: regression cover for untyped PDDL, which used to segfault the node while it
   # was parsing the problem file.
   ament_add_gtest_executable(untyped_domain_test test/src/UntypedDomainTests.cpp)
-  ament_target_dependencies(untyped_domain_test
-    rclcpp std_srvs diagnostic_msgs ros2plan_knowledge_msgs)
+  target_link_libraries(untyped_domain_test
+    rclcpp::rclcpp ${std_srvs_TARGETS} ${diagnostic_msgs_TARGETS} ${ros2plan_knowledge_msgs_TARGETS})
   add_launch_test(test/launch/untyped_domain_test.py
     TARGET untyped_domain_launch_test
     ARGS "test_exe:=$<TARGET_FILE:untyped_domain_test>"

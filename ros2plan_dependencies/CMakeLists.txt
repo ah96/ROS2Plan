@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.10)
 project(ros2plan_dependencies)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -227,7 +227,7 @@ message(STATUS "[${PROJECT_NAME}] Adding ippc_server dependency...")
 include_directories(ippc_server/include ippc_server/cpp-base64)
 
 add_library(ippc_server SHARED ippc_server/src/ippc_server.cpp ippc_server/src/strxml.cpp ippc_server/cpp-base64/base64.cpp)
-ament_target_dependencies(ippc_server ros2plan_knowledge_msgs)
+target_link_libraries(ippc_server ${ros2plan_knowledge_msgs_TARGETS})
 
 install(TARGETS ippc_server
         ARCHIVE DESTINATION lib
