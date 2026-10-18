@@ -2560,7 +2560,7 @@ yyreduce:
   case 24:
 #line 333 "pddl+.yacc"
     { (yyval.t_pred_symbol)=current_analysis->pred_tab.symbol_ref("="); 
-	      requires(E_EQUALITY); ;}
+	      pddl_requires(E_EQUALITY); ;}
     break;
 
   case 25:
@@ -2620,7 +2620,7 @@ yyreduce:
       (yyval.t_var_symbol_list)->set_types((yyvsp[(3) - (4)].t_type));           /* Set types for variables */
       (yyval.t_var_symbol_list)->splice((yyval.t_var_symbol_list)->end(),*(yyvsp[(4) - (4)].t_var_symbol_list));   /* Join lists */ 
       delete (yyvsp[(4) - (4)].t_var_symbol_list);                   /* Delete (now empty) list */
-      requires(E_TYPING);
+      pddl_requires(E_TYPING);
       types_used = true;
    ;}
     break;
@@ -2632,7 +2632,7 @@ yyreduce:
       (yyval.t_var_symbol_list)->set_either_types((yyvsp[(3) - (4)].t_type_list));    /* Set types for variables */
       (yyval.t_var_symbol_list)->splice((yyval.t_var_symbol_list)->end(),*(yyvsp[(4) - (4)].t_var_symbol_list));   /* Join lists */ 
       delete (yyvsp[(4) - (4)].t_var_symbol_list);                   /* Delete (now empty) list */
-      requires(E_TYPING);
+      pddl_requires(E_TYPING);
       types_used = true;
    ;}
     break;
@@ -2661,7 +2661,7 @@ yyreduce:
       (yyvsp[(1) - (4)].t_const_symbol_list)->set_types((yyvsp[(3) - (4)].t_type));           /* Set types for constants */
       (yyvsp[(1) - (4)].t_const_symbol_list)->splice((yyvsp[(1) - (4)].t_const_symbol_list)->end(),*(yyvsp[(4) - (4)].t_const_symbol_list)); /* Join lists */ 
       delete (yyvsp[(4) - (4)].t_const_symbol_list);                   /* Delete (now empty) list */
-      requires(E_TYPING);
+      pddl_requires(E_TYPING);
       types_used = true;
    ;}
     break;
@@ -2673,7 +2673,7 @@ yyreduce:
       (yyvsp[(1) - (4)].t_const_symbol_list)->set_either_types((yyvsp[(3) - (4)].t_type_list));
       (yyvsp[(1) - (4)].t_const_symbol_list)->splice((yyvsp[(1) - (4)].t_const_symbol_list)->end(),*(yyvsp[(4) - (4)].t_const_symbol_list));
       delete (yyvsp[(4) - (4)].t_const_symbol_list);
-      requires(E_TYPING);
+      pddl_requires(E_TYPING);
       types_used = true;
    ;}
     break;
@@ -2805,12 +2805,12 @@ yyreduce:
 	  (yyval.t_effect_lists)->assign_effects.push_back(new assignment((yyvsp[(4) - (6)].t_func_term),E_ASSIGN,(yyvsp[(5) - (6)].t_num_expression)));  
           if((yyvsp[(4) - (6)].t_func_term)->getFunction()->getName()=="total-cost")
           {
-          	requires(E_ACTIONCOSTS); 
+          	pddl_requires(E_ACTIONCOSTS); 
           	// Should also check that $5 is 0...
 		  }
           else
           {
-          	requires(E_NFLUENTS); 
+          	pddl_requires(E_NFLUENTS); 
           }
 	;}
     break;
@@ -2837,7 +2837,7 @@ yyreduce:
 
   case 68:
 #line 560 "pddl+.yacc"
-    { requires(E_TIMED_INITIAL_LITERALS); 
+    { pddl_requires(E_TIMED_INITIAL_LITERALS); 
    		(yyval.t_timed_effect)=new timed_initial_literal((yyvsp[(3) - (4)].t_effect_lists),(yyvsp[(2) - (4)].fval));;}
     break;
 
@@ -2849,13 +2849,13 @@ yyreduce:
   case 70:
 #line 566 "pddl+.yacc"
     {(yyval.t_effect_lists)=(yyvsp[(2) - (2)].t_effect_lists); (yyval.t_effect_lists)->cond_effects.push_front((yyvsp[(1) - (2)].t_cond_effect)); 
-                                      requires(E_COND_EFFS);;}
+                                      pddl_requires(E_COND_EFFS);;}
     break;
 
   case 71:
 #line 568 "pddl+.yacc"
     {(yyval.t_effect_lists)=(yyvsp[(2) - (2)].t_effect_lists); (yyval.t_effect_lists)->forall_effects.push_front((yyvsp[(1) - (2)].t_forall_effect));
-                                      requires(E_COND_EFFS);;}
+                                      pddl_requires(E_COND_EFFS);;}
     break;
 
   case 72:
@@ -2911,7 +2911,7 @@ yyreduce:
   case 82:
 #line 597 "pddl+.yacc"
     {(yyval.t_effect_lists)=new effect_lists; (yyval.t_effect_lists)->assign_effects.push_front((yyvsp[(1) - (1)].t_assignment));
-         requires(E_NFLUENTS);;}
+         pddl_requires(E_NFLUENTS);;}
     break;
 
   case 83:
@@ -2927,7 +2927,7 @@ yyreduce:
   case 85:
 #line 605 "pddl+.yacc"
     {(yyval.t_effect_lists)= (yyvsp[(1) - (2)].t_effect_lists); (yyval.t_effect_lists)->assign_effects.push_back((yyvsp[(2) - (2)].t_assignment));
-                                     requires(E_NFLUENTS); ;}
+                                     pddl_requires(E_NFLUENTS); ;}
     break;
 
   case 86:
@@ -2957,7 +2957,7 @@ yyreduce:
     { (yyval.t_effect_lists)= new effect_lists; 
           (yyval.t_effect_lists)->forall_effects.push_back(
 	       new forall_effect((yyvsp[(6) - (7)].t_effect_lists), (yyvsp[(4) - (7)].t_var_symbol_list), current_analysis->var_tab_stack.pop())); 
-          requires(E_COND_EFFS);;}
+          pddl_requires(E_COND_EFFS);;}
     break;
 
   case 91:
@@ -2965,7 +2965,7 @@ yyreduce:
     { (yyval.t_effect_lists)= new effect_lists;
 	  (yyval.t_effect_lists)->cond_effects.push_back(
 	       new cond_effect((yyvsp[(3) - (5)].t_goal),(yyvsp[(4) - (5)].t_effect_lists)));
-          requires(E_COND_EFFS); ;}
+          pddl_requires(E_COND_EFFS); ;}
     break;
 
   case 92:
@@ -2973,7 +2973,7 @@ yyreduce:
     { (yyval.t_effect_lists)= new effect_lists;
 	  (yyval.t_effect_lists)->cond_assign_effects.push_back(
 	       new cond_effect((yyvsp[(3) - (5)].t_goal),(yyvsp[(4) - (5)].t_effect_lists)));
-          requires(E_COND_EFFS); ;}
+          pddl_requires(E_COND_EFFS); ;}
     break;
 
   case 93:
@@ -2986,7 +2986,7 @@ yyreduce:
 #line 645 "pddl+.yacc"
     { (yyval.t_effect_lists)= new effect_lists;
 	  (yyval.t_effect_lists)->assign_effects.push_front((yyvsp[(1) - (1)].t_assignment));
-          requires(E_NFLUENTS); ;}
+          pddl_requires(E_NFLUENTS); ;}
     break;
 
   case 95:
@@ -3059,7 +3059,7 @@ yyreduce:
     { (yyval.t_effect_lists)= new effect_lists; 
           (yyval.t_effect_lists)->forall_effects.push_back(
 	       new forall_effect((yyvsp[(6) - (7)].t_effect_lists), (yyvsp[(4) - (7)].t_var_symbol_list), current_analysis->var_tab_stack.pop())); 
-          requires(E_COND_EFFS);;}
+          pddl_requires(E_COND_EFFS);;}
     break;
 
   case 107:
@@ -3067,7 +3067,7 @@ yyreduce:
     { (yyval.t_effect_lists)= new effect_lists;
 	  (yyval.t_effect_lists)->cond_assign_effects.push_back(
 	       new cond_effect((yyvsp[(3) - (5)].t_goal),(yyvsp[(4) - (5)].t_effect_lists)));
-          requires(E_COND_EFFS); ;}
+          pddl_requires(E_COND_EFFS); ;}
     break;
 
   case 108:
@@ -3109,7 +3109,7 @@ yyreduce:
   case 115:
 #line 724 "pddl+.yacc"
     {(yyval.t_effect_lists)=new effect_lists; (yyval.t_effect_lists)->assign_effects.push_front((yyvsp[(1) - (1)].t_assignment));
-         requires(E_NFLUENTS);;}
+         pddl_requires(E_NFLUENTS);;}
     break;
 
   case 116:
@@ -3125,7 +3125,7 @@ yyreduce:
   case 118:
 #line 732 "pddl+.yacc"
     {(yyval.t_effect_lists)= (yyvsp[(1) - (2)].t_effect_lists); (yyval.t_effect_lists)->assign_effects.push_back((yyvsp[(2) - (2)].t_assignment));
-                                     requires(E_NFLUENTS); ;}
+                                     pddl_requires(E_NFLUENTS); ;}
     break;
 
   case 119:
@@ -3199,7 +3199,7 @@ yyreduce:
   case 131:
 #line 775 "pddl+.yacc"
     {(yyval.t_expression)= new special_val_expr(E_DURATION_VAR);
-                    requires( E_DURATION_INEQUALITIES );;}
+                    pddl_requires( E_DURATION_INEQUALITIES );;}
     break;
 
   case 132:
@@ -3257,12 +3257,12 @@ yyreduce:
 
   case 142:
 #line 807 "pddl+.yacc"
-    {(yyval.t_comparison_op)= E_LESSEQ; requires(E_DURATION_INEQUALITIES);;}
+    {(yyval.t_comparison_op)= E_LESSEQ; pddl_requires(E_DURATION_INEQUALITIES);;}
     break;
 
   case 143:
 #line 808 "pddl+.yacc"
-    {(yyval.t_comparison_op)= E_GREATEQ; requires(E_DURATION_INEQUALITIES);;}
+    {(yyval.t_comparison_op)= E_GREATEQ; pddl_requires(E_DURATION_INEQUALITIES);;}
     break;
 
   case 144:
@@ -3342,27 +3342,27 @@ yyreduce:
 
   case 159:
 #line 874 "pddl+.yacc"
-    { (yyval.t_expression)= new uminus_expression((yyvsp[(3) - (4)].t_expression)); requires(E_NFLUENTS); ;}
+    { (yyval.t_expression)= new uminus_expression((yyvsp[(3) - (4)].t_expression)); pddl_requires(E_NFLUENTS); ;}
     break;
 
   case 160:
 #line 876 "pddl+.yacc"
-    { (yyval.t_expression)= new plus_expression((yyvsp[(3) - (5)].t_expression),(yyvsp[(4) - (5)].t_expression)); requires(E_NFLUENTS); ;}
+    { (yyval.t_expression)= new plus_expression((yyvsp[(3) - (5)].t_expression),(yyvsp[(4) - (5)].t_expression)); pddl_requires(E_NFLUENTS); ;}
     break;
 
   case 161:
 #line 878 "pddl+.yacc"
-    { (yyval.t_expression)= new minus_expression((yyvsp[(3) - (5)].t_expression),(yyvsp[(4) - (5)].t_expression)); requires(E_NFLUENTS); ;}
+    { (yyval.t_expression)= new minus_expression((yyvsp[(3) - (5)].t_expression),(yyvsp[(4) - (5)].t_expression)); pddl_requires(E_NFLUENTS); ;}
     break;
 
   case 162:
 #line 880 "pddl+.yacc"
-    { (yyval.t_expression)= new mul_expression((yyvsp[(3) - (5)].t_expression),(yyvsp[(4) - (5)].t_expression)); requires(E_NFLUENTS); ;}
+    { (yyval.t_expression)= new mul_expression((yyvsp[(3) - (5)].t_expression),(yyvsp[(4) - (5)].t_expression)); pddl_requires(E_NFLUENTS); ;}
     break;
 
   case 163:
 #line 882 "pddl+.yacc"
-    { (yyval.t_expression)= new div_expression((yyvsp[(3) - (5)].t_expression),(yyvsp[(4) - (5)].t_expression)); requires(E_NFLUENTS); ;}
+    { (yyval.t_expression)= new div_expression((yyvsp[(3) - (5)].t_expression),(yyvsp[(4) - (5)].t_expression)); pddl_requires(E_NFLUENTS); ;}
     break;
 
   case 164:
@@ -3372,7 +3372,7 @@ yyreduce:
 
   case 165:
 #line 884 "pddl+.yacc"
-    { (yyval.t_expression)= (yyvsp[(1) - (1)].t_func_term); requires(E_NFLUENTS); ;}
+    { (yyval.t_expression)= (yyvsp[(1) - (1)].t_func_term); pddl_requires(E_NFLUENTS); ;}
     break;
 
   case 166:
@@ -3470,7 +3470,7 @@ yyreduce:
   case 184:
 #line 962 "pddl+.yacc"
     {(yyval.t_goal)= new qfied_goal(E_FORALL,(yyvsp[(4) - (7)].t_var_symbol_list),(yyvsp[(6) - (7)].t_goal),current_analysis->var_tab_stack.pop());
-        requires(E_UNIV_PRECS);;}
+        pddl_requires(E_UNIV_PRECS);;}
     break;
 
   case 185:
@@ -3485,12 +3485,12 @@ yyreduce:
 
   case 187:
 #line 970 "pddl+.yacc"
-    {(yyval.t_con_goal) = new preference((yyvsp[(3) - (4)].t_con_goal));requires(E_PREFERENCES);;}
+    {(yyval.t_con_goal) = new preference((yyvsp[(3) - (4)].t_con_goal));pddl_requires(E_PREFERENCES);;}
     break;
 
   case 188:
 #line 972 "pddl+.yacc"
-    {(yyval.t_con_goal) = new preference((yyvsp[(3) - (5)].cp),(yyvsp[(4) - (5)].t_con_goal));requires(E_PREFERENCES);;}
+    {(yyval.t_con_goal) = new preference((yyvsp[(3) - (5)].cp),(yyvsp[(4) - (5)].t_con_goal));pddl_requires(E_PREFERENCES);;}
     break;
 
   case 189:
@@ -3501,7 +3501,7 @@ yyreduce:
   case 190:
 #line 977 "pddl+.yacc"
     {(yyval.t_con_goal)= new qfied_goal(E_FORALL,(yyvsp[(4) - (7)].t_var_symbol_list),(yyvsp[(6) - (7)].t_con_goal),current_analysis->var_tab_stack.pop());
-                requires(E_UNIV_PRECS);;}
+                pddl_requires(E_UNIV_PRECS);;}
     break;
 
   case 191:
@@ -3511,12 +3511,12 @@ yyreduce:
 
   case 192:
 #line 985 "pddl+.yacc"
-    {(yyval.t_con_goal) = new preference((yyvsp[(3) - (4)].t_con_goal));requires(E_PREFERENCES);;}
+    {(yyval.t_con_goal) = new preference((yyvsp[(3) - (4)].t_con_goal));pddl_requires(E_PREFERENCES);;}
     break;
 
   case 193:
 #line 987 "pddl+.yacc"
-    {(yyval.t_con_goal) = new preference((yyvsp[(3) - (5)].cp),(yyvsp[(4) - (5)].t_con_goal));requires(E_PREFERENCES);;}
+    {(yyval.t_con_goal) = new preference((yyvsp[(3) - (5)].cp),(yyvsp[(4) - (5)].t_con_goal));pddl_requires(E_PREFERENCES);;}
     break;
 
   case 194:
@@ -3527,7 +3527,7 @@ yyreduce:
   case 195:
 #line 992 "pddl+.yacc"
     {(yyval.t_con_goal)= new qfied_goal(E_FORALL,(yyvsp[(4) - (7)].t_var_symbol_list),(yyvsp[(6) - (7)].t_con_goal),current_analysis->var_tab_stack.pop());
-                requires(E_UNIV_PRECS);;}
+                pddl_requires(E_UNIV_PRECS);;}
     break;
 
   case 196:
@@ -3542,12 +3542,12 @@ yyreduce:
 
   case 198:
 #line 1005 "pddl+.yacc"
-    {(yyval.t_goal)= new preference((yyvsp[(3) - (4)].t_goal)); requires(E_PREFERENCES);;}
+    {(yyval.t_goal)= new preference((yyvsp[(3) - (4)].t_goal)); pddl_requires(E_PREFERENCES);;}
     break;
 
   case 199:
 #line 1007 "pddl+.yacc"
-    {(yyval.t_goal)= new preference((yyvsp[(3) - (5)].cp),(yyvsp[(4) - (5)].t_goal)); requires(E_PREFERENCES);;}
+    {(yyval.t_goal)= new preference((yyvsp[(3) - (5)].cp),(yyvsp[(4) - (5)].t_goal)); pddl_requires(E_PREFERENCES);;}
     break;
 
   case 200:
@@ -3573,7 +3573,7 @@ yyreduce:
   case 204:
 #line 1025 "pddl+.yacc"
     {(yyval.t_con_goal) = new qfied_goal(E_FORALL,(yyvsp[(4) - (7)].t_var_symbol_list),(yyvsp[(6) - (7)].t_con_goal),current_analysis->var_tab_stack.pop());
-        requires(E_UNIV_PRECS);;}
+        pddl_requires(E_UNIV_PRECS);;}
     break;
 
   case 205:
@@ -3634,8 +3634,8 @@ yyreduce:
   case 216:
 #line 1053 "pddl+.yacc"
     {(yyval.t_goal)= new neg_goal((yyvsp[(3) - (4)].t_goal));simple_goal * s = dynamic_cast<simple_goal *>((yyvsp[(3) - (4)].t_goal));
-       if(s && s->getProp()->head->getName()=="=") {requires(E_EQUALITY);} 
-       else{requires(E_NEGATIVE_PRECONDITIONS);};;}
+       if(s && s->getProp()->head->getName()=="=") {pddl_requires(E_EQUALITY);} 
+       else{pddl_requires(E_NEGATIVE_PRECONDITIONS);};;}
     break;
 
   case 217:
@@ -3646,13 +3646,13 @@ yyreduce:
   case 218:
 #line 1059 "pddl+.yacc"
     {(yyval.t_goal)= new disj_goal((yyvsp[(3) - (4)].t_goal_list));
-        requires(E_DISJUNCTIVE_PRECONDS);;}
+        pddl_requires(E_DISJUNCTIVE_PRECONDS);;}
     break;
 
   case 219:
 #line 1062 "pddl+.yacc"
     {(yyval.t_goal)= new imply_goal((yyvsp[(3) - (5)].t_goal),(yyvsp[(4) - (5)].t_goal));
-        requires(E_DISJUNCTIVE_PRECONDS);;}
+        pddl_requires(E_DISJUNCTIVE_PRECONDS);;}
     break;
 
   case 220:
@@ -3668,7 +3668,7 @@ yyreduce:
   case 222:
 #line 1071 "pddl+.yacc"
     {(yyval.t_goal)= new comparison((yyvsp[(2) - (5)].t_comparison_op),(yyvsp[(3) - (5)].t_expression),(yyvsp[(4) - (5)].t_expression)); 
-        requires(E_NFLUENTS);;}
+        pddl_requires(E_NFLUENTS);;}
     break;
 
   case 223:
@@ -3785,22 +3785,22 @@ yyreduce:
 
   case 243:
 #line 1166 "pddl+.yacc"
-    { (yyval.t_structure_def)= (yyvsp[(1) - (1)].t_event_def); requires(E_TIME); ;}
+    { (yyval.t_structure_def)= (yyvsp[(1) - (1)].t_event_def); pddl_requires(E_TIME); ;}
     break;
 
   case 244:
 #line 1167 "pddl+.yacc"
-    { (yyval.t_structure_def)= (yyvsp[(1) - (1)].t_process_def); requires(E_TIME); ;}
+    { (yyval.t_structure_def)= (yyvsp[(1) - (1)].t_process_def); pddl_requires(E_TIME); ;}
     break;
 
   case 245:
 #line 1168 "pddl+.yacc"
-    { (yyval.t_structure_def)= (yyvsp[(1) - (1)].t_durative_action_def); requires(E_DURATIVE_ACTIONS); ;}
+    { (yyval.t_structure_def)= (yyvsp[(1) - (1)].t_durative_action_def); pddl_requires(E_DURATIVE_ACTIONS); ;}
     break;
 
   case 246:
 #line 1169 "pddl+.yacc"
-    { (yyval.t_structure_def)= (yyvsp[(1) - (1)].t_derivation_rule); requires(E_DERIVED_PREDICATES);;}
+    { (yyval.t_structure_def)= (yyvsp[(1) - (1)].t_derivation_rule); pddl_requires(E_DERIVED_PREDICATES);;}
     break;
 
   case 247:
@@ -3930,12 +3930,12 @@ yyreduce:
     {timed_goal * tg = dynamic_cast<timed_goal *>((yyvsp[(4) - (5)].t_goal));
 		(yyval.t_goal) = new timed_goal(new preference((yyvsp[(3) - (5)].cp),tg->clearGoal()),tg->getTime());
 			delete tg;
-			requires(E_PREFERENCES);;}
+			pddl_requires(E_PREFERENCES);;}
     break;
 
   case 268:
 #line 1295 "pddl+.yacc"
-    {(yyval.t_goal) = new preference((yyvsp[(3) - (4)].t_goal));requires(E_PREFERENCES);;}
+    {(yyval.t_goal) = new preference((yyvsp[(3) - (4)].t_goal));pddl_requires(E_PREFERENCES);;}
     break;
 
   case 269:
@@ -4077,7 +4077,7 @@ yyreduce:
 
   case 294:
 #line 1363 "pddl+.yacc"
-    {(yyval.t_type_list)=(yyvsp[(3) - (4)].t_type_list); requires(E_TYPING);;}
+    {(yyval.t_type_list)=(yyvsp[(3) - (4)].t_type_list); pddl_requires(E_TYPING);;}
     break;
 
   case 295:
