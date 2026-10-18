@@ -6,6 +6,10 @@ the original — a PDDL/HDDL/PPDDL/RDDL knowledge base, thirteen planner adapter
 and dispatch, action and sensing interfaces, and the rqt GUI — while following ROS 2
 conventions throughout.
 
+> **Branches.** Each ROS 2 distribution has its own branch: this is `humble`. For ROS 2
+> Lyrical on Ubuntu 26.04, use the [`lyrical`](https://github.com/ah96/ROS2Plan/tree/lyrical)
+> branch.
+
 ## Packages
 
 | Package | Description |
@@ -38,7 +42,7 @@ PANDA and PROST binaries are bundled under `common/bin/`.
 sudo apt install bison flex default-jdk libboost-filesystem-dev
 mkdir -p ~/ros2_ws/src
 cd ~/ros2_ws/src
-git clone https://github.com/ah96/ROS2Plan.git
+git clone -b humble https://github.com/ah96/ROS2Plan.git
 cd ~/ros2_ws
 rosdep install --from-paths src --ignore-src -r -y
 colcon build
