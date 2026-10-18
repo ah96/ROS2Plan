@@ -435,35 +435,35 @@ namespace KCL_ros2plan {
         _getParamsService = create_service<ros2plan_knowledge_msgs::srv::GetRDDLParams>(
                 "~/state/rddl_parameters",
                 std::bind(&RDDLKnowledgeBase::getRDDLParams, this, _1, _2),
-                rmw_qos_profile_services_default, srv_cbg_);
+                rclcpp::ServicesQoS(), srv_cbg_);
         _setRDDLDiscountFactorSrv = create_service<ros2plan_knowledge_msgs::srv::SetFloat>(
                 "~/state/set_rddl_discount_factor",
                 std::bind(&RDDLKnowledgeBase::setRDDLDiscountFactor, this, _1, _2),
-                rmw_qos_profile_services_default, srv_cbg_);
+                rclcpp::ServicesQoS(), srv_cbg_);
         _setRDDLHorizonSrv = create_service<ros2plan_knowledge_msgs::srv::SetInt>(
                 "~/state/set_rddl_horizon",
                 std::bind(&RDDLKnowledgeBase::setRDDLHorizon, this, _1, _2),
-                rmw_qos_profile_services_default, srv_cbg_);
+                rclcpp::ServicesQoS(), srv_cbg_);
         _setRDDLMaxNonDefSrv = create_service<ros2plan_knowledge_msgs::srv::SetInt>(
                 "~/state/set_rddl_max_nondef_actions",
                 std::bind(&RDDLKnowledgeBase::setRDDLMAxNonDefActions, this, _1, _2),
-                rmw_qos_profile_services_default, srv_cbg_);
+                rclcpp::ServicesQoS(), srv_cbg_);
         _setImmediateRewardsSrv = create_service<ros2plan_knowledge_msgs::srv::GetRDDLImmediateReward>(
                 "~/state/get_immediate_reward",
                 std::bind(&RDDLKnowledgeBase::computeImmediateReward, this, _1, _2),
-                rmw_qos_profile_services_default, srv_cbg_);
+                rclcpp::ServicesQoS(), srv_cbg_);
         _reloadDomainStructureSrv = create_service<ros2plan_knowledge_msgs::srv::ReloadRDDLDomainProblem>(
                 "~/reload_rddl_domain",
                 std::bind(&RDDLKnowledgeBase::reloadDomain, this, _1, _2),
-                rmw_qos_profile_services_default, srv_cbg_);
+                rclcpp::ServicesQoS(), srv_cbg_);
         _getEnumtypesSrv = create_service<ros2plan_knowledge_msgs::srv::GetEnumerableTypeService>(
                 "~/domain/enumerable_type",
                 std::bind(&RDDLKnowledgeBase::getEnumTypes, this, _1, _2),
-                rmw_qos_profile_services_default, srv_cbg_);
+                rclcpp::ServicesQoS(), srv_cbg_);
         _getFluentTypeSrv = create_service<ros2plan_knowledge_msgs::srv::GetRDDLFluentType>(
                 "~/domain/fluent_type",
                 std::bind(&RDDLKnowledgeBase::getFluentType, this, _1, _2),
-                rmw_qos_profile_services_default, srv_cbg_);
+                rclcpp::ServicesQoS(), srv_cbg_);
     }
 
     void RDDLKnowledgeBase::getRDDLParams(

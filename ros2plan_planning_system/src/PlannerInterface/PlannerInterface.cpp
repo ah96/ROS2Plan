@@ -42,7 +42,7 @@ namespace KCL_ros2plan {
                    std::shared_ptr<std_srvs::srv::Empty::Response> res) {
                 runPlanningServerDefault(req, res);
             },
-            rmw_qos_profile_services_default,
+            rclcpp::ServicesQoS(),
             srv_cbg_);
 
         planning_server_params_ = create_service<ros2plan_dispatch_msgs::srv::PlanningService>(
@@ -51,7 +51,7 @@ namespace KCL_ros2plan {
                    std::shared_ptr<ros2plan_dispatch_msgs::srv::PlanningService::Response> res) {
                 runPlanningServerParams(req, res);
             },
-            rmw_qos_profile_services_default,
+            rclcpp::ServicesQoS(),
             srv_cbg_);
 
         // action server

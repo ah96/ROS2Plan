@@ -67,7 +67,7 @@ namespace KCL_ros2plan {
                    std::shared_ptr<ros2plan_dispatch_msgs::srv::DispatchService::Response> res) {
                 dispatchPlanService(req, res);
             },
-            rmw_qos_profile_services_default,
+            rclcpp::ServicesQoS(),
             srv_cbg_);
 
         cancel_dispatch_srv_ = create_service<std_srvs::srv::Empty>(
@@ -76,7 +76,7 @@ namespace KCL_ros2plan {
                    std::shared_ptr<std_srvs::srv::Empty::Response> res) {
                 cancelDispatchService(req, res);
             },
-            rmw_qos_profile_services_default,
+            rclcpp::ServicesQoS(),
             srv_cbg_);
     }
 

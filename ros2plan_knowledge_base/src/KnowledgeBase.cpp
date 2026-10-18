@@ -22,70 +22,70 @@ namespace KCL_ros2plan {
         // domain info
         domainServer1 = create_service<kmsrv::GetDomainNameService>(
             "~/domain/name", std::bind(&KnowledgeBase::getDomainName, this, _1, _2),
-            rmw_qos_profile_services_default, srv_cbg_);
+            rclcpp::ServicesQoS(), srv_cbg_);
         domainServer2 = create_service<kmsrv::GetDomainTypeService>(
             "~/domain/types", std::bind(&KnowledgeBase::getTypes, this, _1, _2),
-            rmw_qos_profile_services_default, srv_cbg_);
+            rclcpp::ServicesQoS(), srv_cbg_);
         domainServer3 = create_service<kmsrv::GetDomainAttributeService>(
             "~/domain/predicates", std::bind(&KnowledgeBase::getPredicates, this, _1, _2),
-            rmw_qos_profile_services_default, srv_cbg_);
+            rclcpp::ServicesQoS(), srv_cbg_);
         domainServer4 = create_service<kmsrv::GetDomainAttributeService>(
             "~/domain/functions", std::bind(&KnowledgeBase::getFunctionPredicates, this, _1, _2),
-            rmw_qos_profile_services_default, srv_cbg_);
+            rclcpp::ServicesQoS(), srv_cbg_);
         domainServer5 = create_service<kmsrv::GetDomainOperatorService>(
             "~/domain/operators", std::bind(&KnowledgeBase::getOperators, this, _1, _2),
-            rmw_qos_profile_services_default, srv_cbg_);
+            rclcpp::ServicesQoS(), srv_cbg_);
         domainServer6 = create_service<kmsrv::GetDomainOperatorDetailsService>(
             "~/domain/operator_details", std::bind(&KnowledgeBase::getOperatorDetails, this, _1, _2),
-            rmw_qos_profile_services_default, srv_cbg_);
+            rclcpp::ServicesQoS(), srv_cbg_);
         domainServer7 = create_service<kmsrv::GetDomainPredicateDetailsService>(
             "~/domain/predicate_details", std::bind(&KnowledgeBase::getPredicateDetails, this, _1, _2),
-            rmw_qos_profile_services_default, srv_cbg_);
+            rclcpp::ServicesQoS(), srv_cbg_);
 
         // query
         queryServer = create_service<kmsrv::KnowledgeQueryService>(
             "~/query_state", std::bind(&KnowledgeBase::queryKnowledge, this, _1, _2),
-            rmw_qos_profile_services_default, srv_cbg_);
+            rclcpp::ServicesQoS(), srv_cbg_);
 
         // update
         updateServer0 = create_service<std_srvs::srv::Empty>(
             "~/clear", std::bind(&KnowledgeBase::clearKnowledge, this, _1, _2),
-            rmw_qos_profile_services_default, srv_cbg_);
+            rclcpp::ServicesQoS(), srv_cbg_);
         updateServer1 = create_service<kmsrv::KnowledgeUpdateService>(
             "~/update", std::bind(&KnowledgeBase::updateKnowledge, this, _1, _2),
-            rmw_qos_profile_services_default, srv_cbg_);
+            rclcpp::ServicesQoS(), srv_cbg_);
         updateServer2 = create_service<kmsrv::KnowledgeUpdateServiceArray>(
             "~/update_array", std::bind(&KnowledgeBase::updateKnowledgeArray, this, _1, _2),
-            rmw_qos_profile_services_default, srv_cbg_);
+            rclcpp::ServicesQoS(), srv_cbg_);
         updateServer3 = create_service<kmsrv::KnowledgeUpdateServiceArray>(
             "~/update_constraints_oneof",
             std::bind(&KnowledgeBase::updateKnowledgeConstraintsOneOf, this, _1, _2),
-            rmw_qos_profile_services_default, srv_cbg_);
+            rclcpp::ServicesQoS(), srv_cbg_);
 
         // state fetch
         stateServer1 = create_service<kmsrv::GetInstanceService>(
             "~/state/instances", std::bind(&KnowledgeBase::getInstances, this, _1, _2),
-            rmw_qos_profile_services_default, srv_cbg_);
+            rclcpp::ServicesQoS(), srv_cbg_);
         stateServer2 = create_service<kmsrv::GetAttributeService>(
             "~/state/propositions", std::bind(&KnowledgeBase::getPropositions, this, _1, _2),
-            rmw_qos_profile_services_default, srv_cbg_);
+            rclcpp::ServicesQoS(), srv_cbg_);
         stateServer3 = create_service<kmsrv::GetAttributeService>(
             "~/state/functions", std::bind(&KnowledgeBase::getFunctions, this, _1, _2),
-            rmw_qos_profile_services_default, srv_cbg_);
+            rclcpp::ServicesQoS(), srv_cbg_);
         stateServer4 = create_service<kmsrv::GetAttributeService>(
             "~/state/timed_knowledge", std::bind(&KnowledgeBase::getTimedKnowledge, this, _1, _2),
-            rmw_qos_profile_services_default, srv_cbg_);
+            rclcpp::ServicesQoS(), srv_cbg_);
         stateServer5 = create_service<kmsrv::GetAttributeService>(
             "~/state/goals", std::bind(&KnowledgeBase::getGoals, this, _1, _2),
-            rmw_qos_profile_services_default, srv_cbg_);
+            rclcpp::ServicesQoS(), srv_cbg_);
         stateServer6 = create_service<kmsrv::GetMetricService>(
             "~/state/metric", std::bind(&KnowledgeBase::getMetric, this, _1, _2),
-            rmw_qos_profile_services_default, srv_cbg_);
+            rclcpp::ServicesQoS(), srv_cbg_);
 
         // sensed predicates
         senseServer = create_service<kmsrv::SetNamedBool>(
             "~/update_sensed_predicates", std::bind(&KnowledgeBase::setSensedPredicate, this, _1, _2),
-            rmw_qos_profile_services_default, srv_cbg_);
+            rclcpp::ServicesQoS(), srv_cbg_);
 
         // publisher (latched — transient_local keeps last message for late subscribers)
         status_pub_ = create_publisher<ros2plan_knowledge_msgs::msg::StatusUpdate>(
