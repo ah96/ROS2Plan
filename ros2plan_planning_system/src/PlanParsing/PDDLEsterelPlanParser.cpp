@@ -47,7 +47,7 @@ namespace KCL_ros2plan {
                    std::shared_ptr<std_srvs::srv::Empty::Response> res) {
                 parsePlan(req, res);
             },
-            rmw_qos_profile_services_default,
+            rclcpp::ServicesQoS(),
             srv_cbg_);
 
         parse_plan_from_file_srv_ = create_service<ros2plan_dispatch_msgs::srv::ParsingService>(
@@ -56,7 +56,7 @@ namespace KCL_ros2plan {
                    std::shared_ptr<ros2plan_dispatch_msgs::srv::ParsingService::Response> res) {
                 parsePlanFromFile(req, res);
             },
-            rmw_qos_profile_services_default,
+            rclcpp::ServicesQoS(),
             srv_cbg_);
 
         RCLCPP_INFO(get_logger(), "KCL: (%s) Ready to receive.", get_name());

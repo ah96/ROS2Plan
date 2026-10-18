@@ -94,7 +94,7 @@ namespace KCL_ros2plan {
                    std::shared_ptr<std_srvs::srv::Empty::Response> res) {
                 runProblemServerDefault(req, res);
             },
-            rmw_qos_profile_services_default,
+            rclcpp::ServicesQoS(),
             srv_cbg_);
 
         // Service: generate problem file (params)
@@ -104,7 +104,7 @@ namespace KCL_ros2plan {
                    std::shared_ptr<ros2plan_dispatch_msgs::srv::ProblemService::Response> res) {
                 runProblemServerParams(req, res);
             },
-            rmw_qos_profile_services_default,
+            rclcpp::ServicesQoS(),
             srv_cbg_);
 
         RCLCPP_INFO(get_logger(), "KCL: (%s) Ready to receive.", get_name());

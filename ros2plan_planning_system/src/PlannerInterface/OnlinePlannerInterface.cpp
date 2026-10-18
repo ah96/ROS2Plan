@@ -16,7 +16,7 @@ namespace KCL_ros2plan {
                    std::shared_ptr<ros2plan_dispatch_msgs::srv::GetPlanningParams::Response> res) {
                 getPlannerParams(req, res);
             },
-            rmw_qos_profile_services_default,
+            rclcpp::ServicesQoS(),
             srv_cbg_);
     }
 
