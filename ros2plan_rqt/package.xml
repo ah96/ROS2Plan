@@ -23,6 +23,8 @@
   <depend>ament_index_python</depend>
 
   <exec_depend>python3-yaml</exec_depend>
+  <!-- `dot` lays out the Esterel plan viewer's graph -->
+  <exec_depend>graphviz</exec_depend>
 
   <test_depend>ament_cmake_pytest</test_depend>
 
