@@ -238,7 +238,7 @@ ament_export_dependencies(${DEPS})
 
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
-  find_package(launch_testing_ament_cmake REQUIRED)
+  find_package(ros_testing REQUIRED)
   find_package(ament_index_cpp REQUIRED)
 
   # Pure unit test (no ROS runtime needed): CHIMP problem-file generation
@@ -253,7 +253,7 @@ if(BUILD_TESTING)
   ament_add_gtest_executable(problem_interface_test test/src/ProblemInterfaceTests.cpp)
   ament_target_dependencies(problem_interface_test
     rclcpp std_msgs ros2plan_dispatch_msgs ament_index_cpp)
-  add_launch_test(test/launch/problem_interface_test.py
+  add_ros_test(test/launch/problem_interface_test.py
     TARGET problem_interface_launch_test
     ARGS "test_exe:=$<TARGET_FILE:problem_interface_test>"
     TIMEOUT 120)
@@ -262,7 +262,7 @@ if(BUILD_TESTING)
   ament_add_gtest_executable(parsing_interface_test test/src/ParsingInterfaceTests.cpp)
   ament_target_dependencies(parsing_interface_test
     rclcpp std_srvs ros2plan_dispatch_msgs ament_index_cpp)
-  add_launch_test(test/launch/parsing_interface_test.py
+  add_ros_test(test/launch/parsing_interface_test.py
     TARGET parsing_interface_launch_test
     ARGS "test_exe:=$<TARGET_FILE:parsing_interface_test>"
     TIMEOUT 120)
@@ -271,7 +271,7 @@ if(BUILD_TESTING)
   ament_add_gtest_executable(planner_interface_test test/src/PlannerInterfaceTests.cpp)
   ament_target_dependencies(planner_interface_test
     rclcpp std_msgs ros2plan_dispatch_msgs ament_index_cpp)
-  add_launch_test(test/launch/planner_interface_test.py
+  add_ros_test(test/launch/planner_interface_test.py
     TARGET planner_interface_launch_test
     ARGS "test_exe:=$<TARGET_FILE:planner_interface_test>"
     TIMEOUT 180)
@@ -280,14 +280,14 @@ if(BUILD_TESTING)
   ament_add_gtest_executable(plan_dispatch_test test/src/PlanDispatchTests.cpp)
   ament_target_dependencies(plan_dispatch_test
     rclcpp std_msgs std_srvs ros2plan_dispatch_msgs)
-  add_launch_test(test/launch/plan_dispatch_test.py
+  add_ros_test(test/launch/plan_dispatch_test.py
     TARGET plan_dispatch_launch_test
     ARGS "test_exe:=$<TARGET_FILE:plan_dispatch_test>"
     TIMEOUT 180)
 
   # The shipped launch files, run the way users run them. The tests above build their own
   # launch descriptions, so they stay green even when launch/ is broken; this one does not.
-  add_launch_test(test/launch/interfaced_system_test.py
+  add_ros_test(test/launch/interfaced_system_test.py
     TARGET interfaced_system_launch_test
     TIMEOUT 300)
 
@@ -296,7 +296,7 @@ if(BUILD_TESTING)
     ament_add_gtest_executable(chimp_planner_interface_test test/src/ChimpPlannerInterfaceTests.cpp)
     ament_target_dependencies(chimp_planner_interface_test
       rclcpp std_msgs ros2plan_dispatch_msgs ament_index_cpp)
-    add_launch_test(test/launch/chimp_planner_interface_test.py
+    add_ros_test(test/launch/chimp_planner_interface_test.py
       TARGET chimp_planner_interface_launch_test
       ARGS "test_exe:=$<TARGET_FILE:chimp_planner_interface_test>"
       TIMEOUT 180)
