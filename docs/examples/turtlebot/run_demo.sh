@@ -7,8 +7,8 @@
 # Usage:
 #   bash run_demo.sh [--waypoints N]      (default: 5)
 #
-# Requirements: ROS2 Humble, ROS2Plan built and sourced:
-#   source /opt/ros/humble/setup.bash
+# Requirements: ROS2 Lyrical, ROS2Plan built and sourced:
+#   source /opt/ros/lyrical/setup.bash
 #   source ~/git/ros2_ws/install/setup.bash
 #
 # Each node is started with `ros2 run` and explicit parameters. The nodes

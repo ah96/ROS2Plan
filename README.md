@@ -1,10 +1,14 @@
 # ROS2Plan
 
 ROS2Plan is a port of the [ROSPlan](https://github.com/KCL-Planning/ROSPlan) task planning
-framework to **ROS 2 Humble Hawksbill** on Ubuntu 22.04. It preserves the full feature set of
+framework to **ROS 2 Lyrical Luth** on Ubuntu 26.04. It preserves the full feature set of
 the original — a PDDL/HDDL/PPDDL/RDDL knowledge base, thirteen planner adapters, plan parsing
 and dispatch, action and sensing interfaces, and the rqt GUI — while following ROS 2
 conventions throughout.
+
+> **Branches.** Each ROS 2 distribution has its own branch: this is `lyrical`. For ROS 2
+> Humble on Ubuntu 22.04, use the [`humble`](https://github.com/ah96/ROS2Plan/tree/humble)
+> branch.
 
 ## Packages
 
@@ -26,10 +30,12 @@ PANDA and PROST binaries are bundled under `common/bin/`.
 
 ## Requirements
 
-- ROS2 Humble Hawksbill
-- Ubuntu 22.04 LTS
-- C++17 (GCC 11)
-- Python 3.10+
+- ROS2 Lyrical Luth
+- Ubuntu 26.04 LTS
+- C++20 (GCC 15)
+- Python 3.14
+- CMake 3.10+
+- Qt 6 / PyQt6 (for the rqt plugins; ships with Lyrical's rqt)
 - colcon
 
 ## Installation
@@ -38,12 +44,15 @@ PANDA and PROST binaries are bundled under `common/bin/`.
 sudo apt install bison flex default-jdk libboost-filesystem-dev
 mkdir -p ~/ros2_ws/src
 cd ~/ros2_ws/src
-git clone https://github.com/ah96/ROS2Plan.git
+git clone -b lyrical https://github.com/ah96/ROS2Plan.git
 cd ~/ros2_ws
 rosdep install --from-paths src --ignore-src -r -y
 colcon build
 source install/setup.bash
 ```
+
+`rosdep` also installs the runtime tools the nodes call out to, such as Graphviz (`dot`) for
+the Esterel plan viewer.
 
 Build with the **system** Python interpreter (`/usr/bin/python3`). The ROS 2 interface
 generators need `empy` from the ROS installation, which a virtual environment will usually
@@ -53,7 +62,7 @@ shadow.
 
 The knowledge base supports four modelling languages — **PDDL**, **HDDL**, **PPDDL**
 (probabilistic PDDL) and **RDDL** — and all four are built by a plain `colcon build` on the
-stock Ubuntu 22.04 toolchain:
+stock Ubuntu 26.04 toolchain:
 
 ```bash
 # PDDL + HDDL + PPDDL + RDDL
@@ -137,6 +146,21 @@ A short summary of the port:
 - Python nodes use `rclpy`; complex config loaded from YAML files via a `config_path` parameter
 - `hddl_parser` is built as a shared library to avoid linker symbol collisions
 
+## Differences between the `lyrical` and `humble` branches
+
+The two branches share their sources apart from what the newer ROS 2 release requires. When
+moving a fix from one branch to the other with `git cherry-pick`, these are the places where
+the code differs:
+
+| | `humble` | `lyrical` |
+|---|---|---|
+| Platform | Ubuntu 22.04, GCC 11, CMake 3.22, Python 3.10 | Ubuntu 26.04, GCC 15, CMake 4.2, Python 3.14 |
+| C++ standard | C++17 | C++20 (required by `rclcpp`) |
+| Linking ROS dependencies | `ament_target_dependencies()` | `target_link_libraries()` with the packages' CMake targets (`ament_target_dependencies()` was removed) |
+| Service QoS | `rmw_qos_profile_services_default` | `rclcpp::ServicesQoS()` |
+| VAL requirement check | `requires()` | `pddl_requires()` (`requires` is a C++20 keyword) |
+| rqt GUI | PyQt5 | PyQt6 (scoped enums, `QMouseEvent.position()`) |
+
 ## Simulated action interfaces
 
 For testing without real hardware, use the provided simulated action interface:
@@ -189,7 +213,7 @@ The following plugins are available under *Plugins → ROS2Plan*:
 - **Plan Dispatcher** — send service calls from the GUI
 - **Action Dispatcher** — manually dispatch individual actions
 - **Problem Viewer** — inspect current KB state
-- **Esterel Plan Viewer** — graphical plan visualization
+- **Esterel Plan Viewer** — graphical plan visualization (needs Graphviz's `dot`)
 - **Action Config** — configure action interface parameters
 
 ## Running the tests

@@ -2,6 +2,42 @@
 
 All notable changes to ROS2Plan are documented here.
 
+## [Unreleased] — `lyrical` branch
+
+Port to **ROS 2 Lyrical Luth** on Ubuntu 26.04 (GCC 15, CMake 4.2, Python 3.14, Qt 6). The
+Humble build continues on the `humble` branch.
+
+### Changed
+
+- **Build system.** `ament_target_dependencies()` was removed in Lyrical; every target now links
+  the dependencies' CMake targets directly with `target_link_libraries()`. Minimum CMake raised
+  to 3.10 (CMake 4 deprecates anything older). `ros2plan_knowledge_base` and
+  `ros2plan_planning_system` build as C++20, which Lyrical's `rclcpp` requires anyway.
+- **QoS API.** Services and clients take `rclcpp::ServicesQoS()`; the `rmw_qos_profile_t`
+  overloads of `create_service`/`create_client` no longer exist.
+- **VAL `requires()` renamed to `pddl_requires()`** in both VAL copies (`ros2plan_dependencies/VAL`
+  and the knowledge base's `VALfiles`), including the bison grammars: `requires` is a C++20
+  keyword.
+- **rqt GUI ported to PyQt6.** Imports go through `python_qt_binding` only (no more
+  PyQt4/PyQt5 branches), enums are fully scoped, and Qt 6 API changes are applied
+  (`QMouseEvent.position()`, `QFontMetrics.horizontalAdvance()`, float painter overloads).
+- **GitHub Actions CI workflow removed.** Run the tests locally with `colcon test` (see README).
+- **`ros2plan_rqt` declares `graphviz`**, whose `dot` the Esterel plan viewer runs to lay out
+  the plan graph, so `rosdep` installs it.
+
+### Fixed
+
+- **`problemInterface` crashed on shutdown** (exit -11, about half the time). `ProblemGenerator`
+  had no virtual destructor, so deleting a `PDDLProblemGenerator` through the base-class
+  `unique_ptr` never destroyed its service clients. They kept the ROS context alive past
+  `main()`, and Fast DDS threads crashed once the RMW library was unloaded. The undefined
+  behaviour is present on Humble too.
+- **Esterel plan viewer never rendered a plan under Python 3.** `xdot_qt.py` still used
+  `unicode`, `xrange`, `dict.iteritems()` and `__nonzero__` (the last made the xdot parser read
+  past the end of every attribute string).
+- **Test fixtures `test/pddl/amazon/problem.pddl` and `test/pddl/untyped/problem.pddl` were
+  never committed** — `.gitignore` excluded every `problem.pddl`. Fixtures are now exempt.
+
 ## [2.0.0] — 2026-08-04
 
 Feature parity with ROSPlan verified end to end, and the shipped launch files made to
