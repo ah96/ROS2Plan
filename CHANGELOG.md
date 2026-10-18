@@ -2,6 +2,36 @@
 
 All notable changes to ROS2Plan are documented here.
 
+## [Unreleased] — `jazzy` branch
+
+Port to **ROS 2 Jazzy Jalisco** on Ubuntu 24.04 (GCC 13, CMake 3.28, Python 3.12, Qt 5),
+branched from `humble` with the distro-independent fixes from `lyrical`. The build system
+is unchanged from Humble: `ament_target_dependencies()` still exists in Jazzy and the
+packages stay C++17.
+
+### Changed
+
+- **QoS API.** Services and clients take `rclcpp::ServicesQoS()` instead of the
+  `rmw_qos_profile_t` overloads of `create_service`/`create_client`, which are deprecated in
+  Jazzy and removed in later releases.
+- **VAL `requires()` renamed to `pddl_requires()`** in both VAL copies, including the bison
+  grammars, keeping the sources in sync with `lyrical` (`requires` is a C++20 keyword).
+- **rqt GUI cleanup.** Imports go through `python_qt_binding` only (no more PyQt4/PyQt5
+  branches), enums are fully scoped, and `QFontMetrics.horizontalAdvance()` and the float
+  painter overloads are used. All of this is valid Qt 5.15 API.
+- **`ros2plan_rqt` declares `graphviz`**, whose `dot` the Esterel plan viewer runs to lay out
+  the plan graph, so `rosdep` installs it.
+
+### Fixed
+
+- **`problemInterface` crashed on shutdown.** `ProblemGenerator` had no virtual destructor,
+  so deleting a `PDDLProblemGenerator` through the base-class `unique_ptr` never destroyed
+  its service clients, which kept the ROS context alive past `main()`.
+- **Esterel plan viewer never rendered a plan under Python 3.** `xdot_qt.py` still used
+  `unicode`, `xrange`, `dict.iteritems()` and `__nonzero__`.
+- **`.gitignore` excluded every `problem.pddl`**, including test fixtures under
+  `ros2plan_planning_system/test/pddl/`. Fixtures are now exempt.
+
 ## [2.0.0] — 2026-08-04
 
 Feature parity with ROSPlan verified end to end, and the shipped launch files made to
